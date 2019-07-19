@@ -100,5 +100,13 @@ struct stat
 }
 ```
 
+###目录操作
+struct dirent{
+	off_t	d_off;
+	unsigned short d_reclen;
+	char d_name[NAME_MAX+1];
+}
+d_off是指目录文件开头至此目录进入点的位移，d_reclen是d_name的长度，d_name是以NULL结尾的文件名；
 
+getcwd()会获取当前目录
 
