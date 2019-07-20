@@ -12,8 +12,6 @@
 #include <grp.h>
 #include <dirent.h>
 
-int biaozhi = 1; //等于1打印隐藏文件，等于0不打印隐藏文件；
-
 //自定义的错误处理函数
 void my_err(const char *err_string , int line)
 {
@@ -140,11 +138,6 @@ void have(char *path)
 		my_err("opendir",__LINE__);
 	while((ptr = readdir(dir))!=NULL)
 	{
-		if(biaozhi==0 && ptr->d_name[0] == '.')
-		{
-			i++;
-			continue;
-		}
 		strcpy(a[i],ptr->d_name);
 		a[i][strlen(a[i])+1] = '\0';
 		i++;
@@ -163,25 +156,28 @@ void have2(char *path)
 	char a[256][PATH_MAX+1];
 	struct dirent *ptr;
 	dir = opendir(path);
+	char b[10];
 	if(dir == NULL)
 		my_err("opendir",__LINE__);
 	while((ptr = readdir(dir))!=NULL)
 	{
-		if(biaozhi==0 && ptr->d_name[0] == '.')
-		{
-			i++;
-			continue;
-		}
 		strcpy(a[i],ptr->d_name);
 		a[i][strlen(ptr->d_name)+1] = '\0';
 		i++;
 		number++;
 	}
+	chdir(path);
 	for(i=0;i<number;i++)
 	{	
 		lstat(a[i],&buf);
 		print_file(buf,a[i]);
 	}
+}
+
+//实现ls -R
+void R(char *path)
+{
+
 }
 
 int main(int argc,char *argv[])
@@ -192,10 +188,8 @@ int main(int argc,char *argv[])
 	struct stat buf;
 	if(argc==1)
  	{
-		biaozhi = 1;
 		strcpy(path,"./");
-		path[2] = '\0';
-		have(path);
+		have2(path);
 		return 0;
 	}
 	for(i=1;i<argc;i++)
@@ -228,26 +222,44 @@ int main(int argc,char *argv[])
 			{
 				path[strlen(argv[i])] = '/';
 				path[strlen(argv[i])+1] = '\0';
+			}	
+			switch(choose)
+			{
+				case 1:
+					{
+						have(path);
+						break;
+					}
+				case 2:
+					{
+						have2(path);
+						break;
+					}
+				case 3:
+					{
+						have2(path);
+						break;
+					}
+				default:break;
 			}
 		}
-		switch(choose)
+		else
 		{
-			case 1:
-				{
-					have(path);
-					break;
-				}
-			case 2:
-				{
-					have2(path);
-					break;
-				}
-			case 3:
-				{
-					have2(path);
-					break;
-				}
-			default:break;
+			lstat(path,&buf);
+			switch(choose)
+			{
+				case 1:
+					{
+						printf("%s\n",path);
+						break;
+					}
+				case 2:
+					{
+						print_file(buf,path);
+						break;
+					}
+				default:break;
+			}
 		}
 	}
 	else
