@@ -12,7 +12,7 @@
 #include <grp.h>
 #include <dirent.h>
 
-int biaozhi; //等于0打印隐藏文件，等于一不打印隐藏文件；
+int biaozhi = 1; //等于1打印隐藏文件，等于0不打印隐藏文件；
 
 //自定义的错误处理函数
 void my_err(const char *err_string , int line)
@@ -127,7 +127,7 @@ void printf_name(char name[][PATH_MAX+1],int num)
 	printf("\n");
 }
 
-//从目录中获得文件列表
+//从目录中获得文件列表 ls -a 和 ls
 void have(char *path)
 {
 	DIR *dir;
@@ -153,6 +153,7 @@ void have(char *path)
 	printf_name(a,number);
 }
 
+//ls -l 和 ls -al
 void have2(char *path)
 {
 	DIR *dir;
@@ -172,30 +173,105 @@ void have2(char *path)
 			continue;
 		}
 		strcpy(a[i],ptr->d_name);
-		a[i][strlen(a[i])+1] = '\0';
+		a[i][strlen(ptr->d_name)+1] = '\0';
 		i++;
 		number++;
 	}
 	for(i=0;i<number;i++)
 	{	
-		if(biaozhi==0 && a[i][0]=='.')
 		lstat(a[i],&buf);
 		print_file(buf,a[i]);
 	}
-	
 }
 
 int main(int argc,char *argv[])
 {
 	char path[32];
+	int choose=0;
 	int i,j,k,m=0,num=0,c;
 	struct stat buf;
-	char a[10];
 	if(argc==1)
  	{
-		biaozhi = 0;
+		biaozhi = 1;
 		strcpy(path,"./");
-		have2(path);
+		path[2] = '\0';
+		have(path);
 		return 0;
 	}
+	for(i=1;i<argc;i++)
+	{
+		if(argv[i][0] == '-')
+		{
+			k = strlen(argv[i]);
+			for(j=0;j<k;j++)
+			{
+				if(argv[i][j] == 'a')
+					choose += 1;
+				if(argv[i][j] == 'l')
+					choose += 2;
+			}
+		}
+		else
+		{
+			strcpy(path,argv[i]);
+			num++;
+		}
+	}
+	i--;
+	if(num != 0)
+	{
+		if(stat(path,&buf) == -1)
+			my_err("path",__LINE__);
+		if(S_ISDIR(buf.st_mode))
+		{
+			if(path[strlen(argv[i])-1] != '/')
+			{
+				path[strlen(argv[i])] = '/';
+				path[strlen(argv[i])+1] = '\0';
+			}
+		}
+		switch(choose)
+		{
+			case 1:
+				{
+					have(path);
+					break;
+				}
+			case 2:
+				{
+					have2(path);
+					break;
+				}
+			case 3:
+				{
+					have2(path);
+					break;
+				}
+			default:break;
+		}
+	}
+	else
+	{
+		strcpy(path,"./");
+		path[2] = '\0';
+		switch(choose)
+		{
+			case 1:
+				{
+					have(path);
+					break;
+				}
+			case 2:
+				{
+					have2(path);
+					break;
+				}
+			case 3:
+				{
+					have2(path);
+					break;
+				}
+		}	
+	}
+	return 0;
 }
