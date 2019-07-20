@@ -21,23 +21,17 @@
 int g_leave_len = MAXROWLWN;
 int g_maxlen;  //存放某目录下最长文件名的长度
 
-int yy;
+
 void recursion(int flag_param,char * path)//本函数的意义是递归显示目录下的文件
 {
-    //printf("%d %s\n",errno,strerror(errno));
-    //printf("递归 : %d \n",yy);
+    //printf("%s\n",path);
+    //printf("%d  %s:\n",flag_param,path);
     DIR *dir;
     struct dirent *ptr;
     int count=0;
     char filename[7300][256],temp[256];
     char book[7300][256];
     int ans=0;
-    if(strcmp(path,"/usr/share/ghostscript/9.22/Resource/CIDFSubst/DroidSansFallback.ttf/")==0)
-    return 0;
-    if(strcmp(path,"/usr/src/linux-headers-4.15.0-29deepin-generic/scripts/dtc/include-prefixes/powerpc/")==0)
-    return 0;
-    if(strcmp)
-    //printf("%s:\n",path);
     dir=opendir(path);  //先打开一遍统计文件名数量
     if(dir==NULL)
     {
@@ -52,20 +46,16 @@ void recursion(int flag_param,char * path)//本函数的意义是递归显示目
         }
         count++;
     }
-    printf("number : %d\n",count);
     closedir(dir);
     if(count>7300)
     {
         my_err("too many file under this dir!\n",__LINE__);
     }
-    //printf("%s\n",path);
+    printf("%d\n",count);
     int i,j,len=strlen(path);
+
+    dir=opendir(path);
     struct stat buf;
-    if((dir=opendir(path))==-1)
-    {
-        printf("error in opendir!\n");
-        return ;
-    }
     for(int i=0;i<count;i++)
     {
         ptr=readdir(dir);
@@ -75,8 +65,11 @@ void recursion(int flag_param,char * path)//本函数的意义是递归显示目
         if(filename[i][0]=='.') continue;
         strcat(filename[i],ptr->d_name);
         filename[i][len+strlen(ptr->d_name)]='\0';
-        //printf("%d   stat:  %s\n",flag_param,filename[i]);
+        if(flag_param>=8)
+        display(3,filename[i]);
+        else 
         display(flag_param-4,filename[i]);
+        //这里是为了使用没有R参数的显示函数 因为-R参数值为4
         lstat(filename[i],&buf);
         if(S_ISDIR(buf.st_mode))  //此文件是一个目录 应该递归显示
         {
@@ -101,10 +94,7 @@ void recursion(int flag_param,char * path)//本函数的意义是递归显示目
         }
         if(flag) continue;
         printf("\n%s:\n",book[k]);
-        yy++;
-        //printf("yy:%d\n",yy);
         recursion(flag_param,strcat(book[k],"/"));
-        yy--;
         putchar('\n');
     }
 }
@@ -137,7 +127,6 @@ void display_attribute(struct stat buf,char * name)  /*显示所有的状态信�
     }else if(S_ISSOCK(buf.st_mode)){   //socket文件
         printf("s");
     }
-
     if(buf.st_mode & S_IRUSR){ //用户的权限
         printf("r");
     }else 
@@ -150,7 +139,6 @@ void display_attribute(struct stat buf,char * name)  /*显示所有的状态信�
         printf("x");
     }else
     printf("-");
-
 
     if(buf.st_mode & S_IRGRP){ //用户组的权限
         printf("r");
@@ -181,14 +169,14 @@ void display_attribute(struct stat buf,char * name)  /*显示所有的状态信�
 
     printf(" ");
 
-
     psd=getpwuid(buf.st_uid);
     grp=getgrgid(buf.st_gid);
-
     printf("%4d  ",buf.st_nlink);
-    printf("%-8s",psd->pw_name);
+    //printf("hello world\n");
+    printf("%-8s",psd->pw_name);  //这里错误
+    //printf("hello world\n");
     printf("%-8s",grp->gr_name);
-
+    //printf("hello world\n");
     printf("%6d",buf.st_size);//文件的大小
     strcpy(buf_time,ctime(&buf.st_mtime));  //文件的最后修改时间
     //ctime函数的作用为把时间转化为字符串
@@ -215,14 +203,11 @@ void display_single(char *name)
 
 void display(int flag,char *pathname)  //传入一个路径名 
 {
+    //printf("%d ok\n",flag);
     int i,j;
     struct stat buf;
-    char name[256];  //代表名称的最长值 不同系统可能不同
+    char name[512];  //代表名称的最长值 不同系统可能不同
     //printf("ol  %s:",pathname);
-    if(lstat(pathname,&buf)==-1)
-    {
-        my_err("stat",__LINE__);  //stat函数出现错误 进行精确到行的报错
-    } 
     for(i=0,j=0;i<strlen(pathname);i++)
     {
         if(pathname[i]=='/')  //目录之间的分隔符
@@ -232,10 +217,12 @@ void display(int flag,char *pathname)  //传入一个路径名
         name[j++]=pathname[i];
     }
     name[j]='\0';
-    //printf("%d name: %s\n",flag,name);
-    char tmp[100];
+    char tmp[512];
     strcpy(tmp,name);
-    //仅支持-a -l选项 即四种情况
+    if(lstat(pathname,&buf)==-1)
+    {
+        my_err("stat",__LINE__);  //stat函数出现错误 进行精确到行的报错
+    } 
     switch (flag)
     {
         case PARAM_NONE:
@@ -253,6 +240,7 @@ void display(int flag,char *pathname)  //传入一个路径名
             }
             break;
         case PARAM_A+PARAM_L:
+                //printf("ok :  %s \n",pathname);
                 display_attribute(buf,name);
                 printf("  %s\n",tmp);
                 break;
@@ -263,6 +251,7 @@ void display(int flag,char *pathname)  //传入一个路径名
 
 void display_dir(int flag_param,char * path)
 {
+    //printf("%dbbb\n",flag_param);
     if(flag_param>=4) //证明有-R选项      //上面已经遍历此目录
     {
         recursion(flag_param,path);
@@ -270,7 +259,7 @@ void display_dir(int flag_param,char * path)
         DIR *dir;
         struct dirent *ptr;
         int count=0;
-        char filename[256][_PC_PATH_MAX+1],temp[_PC_PATH_MAX+1];
+        char filename[7300][512];
         dir=opendir(path);  //先打开一遍统计文件名数量
         if(dir==NULL)
         {
@@ -286,7 +275,7 @@ void display_dir(int flag_param,char * path)
             count++;
         }
         closedir(dir);
-        if(count>256)
+        if(count>7300)
         {
             my_err("too many file under this dir!\n",__LINE__);
         }
@@ -294,7 +283,7 @@ void display_dir(int flag_param,char * path)
         int i,j,len=strlen(path);
 
         dir=opendir(path);
-
+        printf("%d:\n",count);
         for(int i=0;i<count;i++)
         {
             ptr=readdir(dir);
@@ -304,7 +293,9 @@ void display_dir(int flag_param,char * path)
             filename[i][len]='\0';  //因为strcat的实现需要最后一位是‘\0’
             strcat(filename[i],ptr->d_name);
             filename[i][len+strlen(ptr->d_name)]='\0';
+            //printf("qing");
             display(flag_param,filename[i]);
+            //printf("hou");
         }
         closedir(dir);
         if(flag_param & PARAM_L ==0)  //没有l的时候打印一个换行符
@@ -346,26 +337,29 @@ int main(int argc ,char ** argv)
             exit(1);
         }
     }
-    const int yy=flag_param;
+    int ff = 0 ;
+    ff = flag_param;
+    //printf("flag_param: %d\n",flag_param);
+    //printf("%d  :flag_param: %d\n",ff,flag_param);
     param[j]='\0';
     if(num+1==argc)
     {
         strcpy(path,"./");  //没有参数的话默认为当前目录
         path[2]='\0';
-        //printf(";;;%d,\n",flag_param);
-        display_dir(yy,path);
+        printf("%d  :flag_param: \n",ff);
+        display_dir(flag_param,path);
         return 0;
     }
     i=1;
     do{
-        //if(i==argc-1) return 0;; //防止无参数时的段错误
+        //if(i==argc-1) return 0; //防止无参数时的段错误
         if(argv[i][0]=='-') 
         {
             i++;
             continue;
         }else
-        {
-            //printf("%s\n",path);
+       {
+            printf("%s\n",path);
             strcpy(path,argv[i]);
             if(stat(path,&buf)==-1)
             {
@@ -381,13 +375,12 @@ int main(int argc ,char ** argv)
                 {
                     path[strlen(argv[i])]='\0';
                 }
-                //printf("canshu   %s  : %d\n",path,flag_param);
-                //printf(";;;%d,\n",flag_param);
-                display_dir(yy,path);
+                //printf(":%d  :flag_param ok  : %d\n",ff,flag_param);
+                display_dir(flag_param,path);
             }else
             {
-                //printf(";;;%d,\n",flag_param);
-                display(yy,path);//参数为一个文件
+                //printf("2    :%d  :flag_param ok  : %d\n",ff,flag_param);
+                display(flag_param,path);//参数为一个文件
             }
             i++;
         }
