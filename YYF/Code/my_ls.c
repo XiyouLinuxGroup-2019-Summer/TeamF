@@ -12,6 +12,12 @@
 #include <grp.h>
 #include <dirent.h>
 
+struct rrr{
+char a[256];
+struct rrr *next;
+};
+
+int pdd=0;
 //自定义的错误处理函数
 void my_err(const char *err_string , int line)
 {
@@ -175,14 +181,66 @@ void have2(char *path)
 }
 
 //实现ls -R
-void R(char *path)
+void R(struct rrr *head)
 {
-
+	DIR *dir;
+	int k;
+	struct stat buf;
+	char arr[256];
+	struct dirent *ptr;
+	struct rrr *p = head;
+	struct rrr *p1,*phead = NULL,*p2;
+	while(p != NULL)
+	{
+		printf("\n%s:\n",p->a);
+		if((dir = opendir(p->a)) == NULL)
+		{
+			p = p->next;
+			continue;
+		}
+		while((ptr = readdir(dir)) != NULL)
+		{
+			if(strcmp(ptr->d_name,".")==0)
+				continue;
+			if(strcmp(ptr->d_name,"..") == 0)
+				continue;
+			strcpy(arr,ptr->d_name);
+			printf("%s	",arr);
+			sprintf(arr,"%s%s",p->a,ptr->d_name);
+			lstat(arr,&buf);
+			if(S_ISDIR(buf.st_mode))
+			{
+				k = strlen(arr);
+				arr[k] = '/';
+				arr[k+1] = '\0';
+				p1 = (struct rrr*)malloc(sizeof(struct rrr));
+				strcpy(p1->a,arr);
+				if(phead == NULL)
+					phead = p1;
+				else
+					p2->next = p1;
+				p2 = p1;
+			}
+		}
+		closedir(dir);
+		if(phead == NULL)
+		{
+			p = p->next;
+			continue;
+		}
+		p2->next = NULL;
+		printf("\n");
+		R(phead);
+		free(phead);
+		phead = NULL;
+		p = p->next;
+	}
 }
 
 int main(int argc,char *argv[])
 {
 	char path[32];
+	struct rrr *head,*p;
 	int choose=0;
 	int i,j,k,m=0,num=0,c;
 	struct stat buf;
@@ -203,6 +261,8 @@ int main(int argc,char *argv[])
 					choose += 1;
 				if(argv[i][j] == 'l')
 					choose += 2;
+				if(argv[i][j] == 'R')
+					choose += 4;
 			}
 		}
 		else
@@ -218,6 +278,10 @@ int main(int argc,char *argv[])
 			my_err("path",__LINE__);
 		if(S_ISDIR(buf.st_mode))
 		{
+			p = (struct rrr*)malloc(sizeof(struct rrr));
+			head = p;
+			strcpy(p->a,path);
+			p->next = NULL;
 			if(path[strlen(argv[i])-1] != '/')
 			{
 				path[strlen(argv[i])] = '/';
@@ -235,9 +299,9 @@ int main(int argc,char *argv[])
 						have2(path);
 						break;
 					}
-				case 3:
+				case 4:
 					{
-						have2(path);
+						R(head);
 						break;
 					}
 				default:break;
@@ -258,14 +322,20 @@ int main(int argc,char *argv[])
 						print_file(buf,path);
 						break;
 					}
+				case 4:
+					{
+						printf("%s\n",path);
+					}
 				default:break;
 			}
 		}
 	}
 	else
 	{
-		strcpy(path,"./");
-		path[2] = '\0';
+		p = (struct rrr*)malloc(sizeof(struct rrr));
+		head = p;
+		p->next = NULL;
+		strcpy(p->a,"./");
 		switch(choose)
 		{
 			case 1:
@@ -278,9 +348,9 @@ int main(int argc,char *argv[])
 					have2(path);
 					break;
 				}
-			case 3:
+			case 4:
 				{
-					have2(path);
+					R(head);
 					break;
 				}
 		}	
