@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package test;
+
+message user_login
+{
+    string username = 1;
+    string passwd = 2;
+}
+
+message user_info
+{
+    int32 classroom = 1 ;
+    string studentID = 2 ;
+}
+
+message student
+{
+    int32 STAMP = 1;
+    user_login userlogin = 2 ;
+    user_info usrInfo = 3;
+    repeated int32 array = 4;
+}
