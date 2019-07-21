@@ -237,6 +237,63 @@ void R(struct rrr *head)
 	}
 }
 
+//实现ls -lR
+void LR(struct rrr *head)
+{
+	DIR *dir;
+	int k;
+	struct stat buf;
+	char arr[256];
+	struct dirent *ptr;
+	struct rrr *p = head;
+	struct rrr *p1,*phead = NULL,*p2;
+	while(p != NULL)
+	{
+		printf("\n%s:\n",p->a);
+		if((dir = opendir(p->a)) == NULL)
+		{
+			p = p->next;
+			continue;
+		}
+		while((ptr = readdir(dir)) != NULL)
+		{
+			if(strcmp(ptr->d_name,".")==0)
+				continue;
+			if(strcmp(ptr->d_name,"..") == 0)
+				continue;
+			strcpy(arr,ptr->d_name);
+			sprintf(arr,"%s%s",p->a,ptr->d_name);
+			lstat(arr,&buf);
+			print_file(buf,arr);
+			if(S_ISDIR(buf.st_mode))
+			{
+				k = strlen(arr);
+				arr[k] = '/';
+				arr[k+1] = '\0';
+				p1 = (struct rrr*)malloc(sizeof(struct rrr));
+				strcpy(p1->a,arr);
+				if(phead == NULL)
+					phead = p1;
+				else
+					p2->next = p1;
+				p2 = p1;
+			}
+		}
+		closedir(dir);
+		if(phead == NULL)
+		{
+			p = p->next;
+			continue;
+		}
+		p2->next = NULL;
+		printf("\n");
+		LR(phead);
+		free(phead);
+		phead = NULL;
+		p = p->next;
+	}
+}
+
 int main(int argc,char *argv[])
 {
 	char path[32];
@@ -304,6 +361,21 @@ int main(int argc,char *argv[])
 						R(head);
 						break;
 					}
+				case 6:
+					{
+						LR(head);
+						break;
+					}
+				case 7:
+					{
+						LR(head);
+						break;
+					}
+				case 0:
+					{
+					       have2(path);
+					       break;
+				        }
 				default:break;
 			}
 		}
@@ -325,7 +397,18 @@ int main(int argc,char *argv[])
 				case 4:
 					{
 						printf("%s\n",path);
+						break;
 					}
+				case 3:
+					{
+						print_file(buf,path);
+						break;
+					}
+				case 6:
+					{
+						printf_file(buf,path);
+						break;
+				        }
 				default:break;
 			}
 		}
@@ -353,6 +436,17 @@ int main(int argc,char *argv[])
 					R(head);
 					break;
 				}
+			case 6:
+				{
+					LR(head);
+					break;
+				}
+			case 3:
+				{
+					have2(path);
+					break;
+				}
+			default:break;
 		}	
 	}
 	return 0;
