@@ -185,6 +185,7 @@ void R(struct rrr *head)
 {
 	DIR *dir;
 	int k;
+	int haha = 0;
 	struct stat buf;
 	char arr[256];
 	struct dirent *ptr;
@@ -205,7 +206,13 @@ void R(struct rrr *head)
 			if(strcmp(ptr->d_name,"..") == 0)
 				continue;
 			strcpy(arr,ptr->d_name);
-			printf("%s	",arr);
+			printf("%-40s",arr);
+			haha += 1;
+			if(haha == 2)
+			{
+				printf("\n");
+				haha = 0;
+			}
 			sprintf(arr,"%s%s",p->a,ptr->d_name);
 			lstat(arr,&buf);
 			if(S_ISDIR(buf.st_mode))
@@ -361,6 +368,11 @@ int main(int argc,char *argv[])
 						R(head);
 						break;
 					}
+				case 3:
+					{
+						have2(path);
+						break;
+					}
 				case 6:
 					{
 						LR(head);
@@ -406,9 +418,14 @@ int main(int argc,char *argv[])
 					}
 				case 6:
 					{
-						printf_file(buf,path);
+						print_file(buf,path);
 						break;
 				        }
+				case 7:
+					{
+						print_file(buf,path);
+						break;
+					}
 				default:break;
 			}
 		}
@@ -419,6 +436,7 @@ int main(int argc,char *argv[])
 		head = p;
 		p->next = NULL;
 		strcpy(p->a,"./");
+		strcpy(path,"./");
 		switch(choose)
 		{
 			case 1:
@@ -445,6 +463,10 @@ int main(int argc,char *argv[])
 				{
 					have2(path);
 					break;
+				}
+			case 7:
+				{
+					LR(head);
 				}
 			default:break;
 		}	
