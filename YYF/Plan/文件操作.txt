@@ -1,0 +1,112 @@
+##关于权限参数mode的数值
+
+字符常量值|字符常量值对应的8进制值|含义
+---|:--:|--:
+S_IRUSR|00400|文件所有者具有可读权限
+S_IWUSR|00200|文件所有者具有可写的权限
+S_IRGRP|00040|用户组具有可读权限
+S_IROTH|00004|其他用户具有可读权限
+
+atoi()函数是将字符串转化为整形数
+
+##文件的输入输出
+###文件的创建，打开，关闭
+####open函数
+```c
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+int open(const char *pathname , int flags , mode_t mode)
+```
+其中第一个参数pathname是要打开或创建的文件名，flags表示打开文件的方式
+O_RDONLY:以只读的形式打开文件;
+O_WRONLY:以只写的形式打开文件；
+O_RDWR:以可读可写的形式打开文件；
+这3种打开方式是互斥的不能同时使用两个或三个，但是他们可以和下面的标志进行或运算：
+O_CREAT:若文件不存在则自动建立该文件，此时需要第三个参数mode，以说明新文件的权限；
+O_EXCL:如果O_CREAT也被设置则此指令会去检查文件是否存在。文件若不存在则创建该文件，存在则出错；
+O_TRUNC:若文件存在并且以可写的方式打开时，此标志会将文件长度清0，但文件属性不变；
+当需要用到第三个参数时，新文件的实际权限是mode& ~umask运算后的结果，就是mode减去umask中包含的权限
+open函数如果有错误发生则返回-1，并将错误代码赋给erron;
+
+###文件的读写
+####read函数
+```c
+#include <unistd.h>
+ssize_t read(int fd , void*buf , size_t count);
+```
+函数含义：从文件描述符fd指向的文件中取出count个字节的数据到buf所指向的缓存中，若count为0则read()不会读取数据只返回0；
+
+####write函数
+```c
+#inlcude <unistd.h>
+ssize_t write(int fd , const void *buf , size_t count);
+```
+含义：将buf所指向的缓冲区的count个字节数据写入到fd所指向的文件中;
+
+###文件读写指针的移动
+####lseek函数
+```c
+#include <sys/types.h>
+#include <unistd.h>
+off_t lseek(int fildes, off_t offset, int whence);
+```
+fildes:打开的文件描述符;
+offest:根据参数whence来移动读写位置的位移数，这个参数可以为负数，表示向前移动；
+whence有以下3种形式：
+->SEEK_SET:文件开始处
+->SEEK_CUR:当前位置
+->SEEK_END:文件末尾
+lseek允许文件指针设置到文件结束符(EOF)后面，这样做不会改变文件的大小;
+
+###dup,dup2,fcntl,ioctl系统调用
+```c
+#include <unistd.h>
+int dup(int oldfd);
+int dup2(int oldfd,int newfd)
+```
+dup用来复制oldfd所指的文件描述符，复制成功时返回最小的未被使用文件描述符，返回的文件描述符和oldfd指向同一个文件，共享所有的东西，当使用lseek改变文件指针时，另一个也会变；
+dup2可以自己指定文件描述符的数值，如果指定的文件描述符已经被使用，系统就会关闭这个文件描述符，如果newfd和oldfd一样就会返回newfd，不关闭它；
+
+###文件的属性操作
+获取文件属性的函数stat/fstat/lstat
+```c
+#include <sys/types.h>
+#include <sts/stat.h>
+#include <unistd.h>
+int stat(const char *file_name, struct stat *buf);
+int fstat(int fd,struct stat *buf);
+int lstst(const char*file_name, struct stat *buf);
+```
+其中lstat与fstat和stat的区别在于对于符号链接文件，lstat返回的是符号链接文件本身的状态信息，而stat返回的是链接指向的文件状态信息；
+
+```c
+//struct stat*buf的内容
+struct stat
+{
+	dev_t 		st_dev; //文件的设备编号
+	ino_t 		st_ino; //文件的inode
+	mode_t 		st_mode; //文件的类型与权限
+	nlink_t 	st_nlink; //连接到该文件的硬链接数目
+	uid_t 		st_uid; //文件所有者的用户id
+	gid_t 		st_gid; //文件所有者的组id
+	dev_t 		st_rdev; //若此文件为设备文件，则为设备编号
+	off_t 		st_size; //文件大小，对符号链接该大小为所指向的文件名的长度
+	blksize_t	st_blksize; //文件系统的I/O缓冲区大小
+	blkcnt_t     	st_blocks; //占用文件快的个数，每一块为512个字节
+	time_t		st_atime; //文件最后一次被访问的时间
+	time_t		st_ctime; //文件最后一次被更改的时间，在文件所有者，所属组，文件权限被更改时更新
+	time_t 		st_mtime; //文件最后一次被修改的时间；
+}
+```
+
+###目录操作
+struct dirent{
+	off_t	d_off;
+	unsigned short d_reclen;
+	char d_name[NAME_MAX+1];
+}
+d_off是指目录文件开头至此目录进入点的位移，d_reclen是d_name的长度，d_name是以NULL结尾的文件名；
+
+getcwd()会获取当前目录
+
