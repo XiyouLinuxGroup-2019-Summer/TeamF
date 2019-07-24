@@ -135,7 +135,7 @@ int print_file(struct stat buf ,char *name)
 	printf(" %s",buff);
 	if(S_ISLNK(buf.st_mode))
 	{
-		printf(" %s----->",name);
+		printf(" %s->",name);
 		printf("%s\n",get_exe_path(name,(char*)hen,1024));
 	}
 	else
@@ -265,7 +265,7 @@ void R(struct rrr *head)
 				printf("\n");
 				haha = 0;
 			}
-			sprintf(arr,"%s/%s",p->a,ptr->d_name);
+			sprintf(arr,"%s%s",p->a,ptr->d_name);
 			lstat(arr,&buf);
 			if(S_ISDIR(buf.st_mode))
 			{
@@ -323,11 +323,22 @@ void LR(struct rrr *head)
 				continue;
 			if(strcmp(ptr->d_name,"..") == 0)
 				continue;
-			if(strcmp(ptr->d_name,"4523")==0)
+			if(strcmp(ptr->d_name,"proc")==0)
+				continue;
+			if(strcmp(ptr->d_name,"mimetypes") == 0)
+				continue;
+			if(ptr->d_name[0] == '.')
+				continue;
+			if(strcmp(ptr->d_name,"OS")==0)
 				continue;
 			strcpy(arr,ptr->d_name);
-			sprintf(arr,"%s/%s",p->a,ptr->d_name);
+			sprintf(arr,"%s%s",p->a,ptr->d_name);
 			if(lstat(arr,&buf) < 0)
+				continue;
+			if(buf.st_uid != 0 && buf.st_uid != 1000)
+				continue;
+			pwd = getpwuid(buf.st_uid);
+			if(strcmp(pwd->pw_name,"root")!=0 && strcmp(pwd->pw_name,"xzwb")!=0)
 				continue;
 			print_file(buf,arr);
 			if(S_ISDIR(buf.st_mode))
@@ -556,3 +567,4 @@ int main(int argc,char *argv[])
 	}
 	return 0;
 }
+
