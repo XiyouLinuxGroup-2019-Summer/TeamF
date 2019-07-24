@@ -11,12 +11,34 @@
 #include <pwd.h>
 #include <grp.h>
 #include <dirent.h>
+#include <sys/wait.h>
+
+int biaozhi = 0;
 
 struct rrr{
 char a[256];
 struct rrr *next;
 };
 
+char * get_exe_path( char *path ,char * buf, int count)
+{
+    int i;
+    int rslt = readlink(path, buf, count - 1);
+    if (rslt < 0 || (rslt >= count - 1))
+    {
+        return NULL;
+    }
+    buf[rslt] = '\0';
+    for (i = rslt; i >= 0; i--)
+    {
+        if (buf[i] == '/')
+        {
+            buf[i + 1] = '\0';
+            break;
+        }
+    }
+    return buf;
+}
 int pdd=0;
 //自定义的错误处理函数
 void my_err(const char *err_string , int line)
@@ -30,6 +52,7 @@ void my_err(const char *err_string , int line)
 int print_file(struct stat buf ,char *name)
 {
 	char buff[64];
+	char hen[1024];
 	struct passwd *pwd; //从该结构体获取文件所有者的名字
 	struct group *grp; //从该结构体获取文件组名
 	//判断文件类型
@@ -110,12 +133,18 @@ int print_file(struct stat buf ,char *name)
 	strcpy(buff,ctime(&buf.st_ctime));
 	buff[strlen(buff)-1] = '\0';
 	printf(" %s",buff);
-	printf(" %s\n",name);
+	if(S_ISLNK(buf.st_mode))
+	{
+		printf(" %s->",name);
+		printf("%s\n",get_exe_path(name,(char*)hen,1024));
+	}
+	else
+		printf(" %s\n",name);
 	return 0;
 }
 
 //只打印文件名的
-void printf_name(char name[][PATH_MAX+1],int num)
+void printf_name(char name[][256],int num)
 {
 	int i,j=0;
 	for(i=0;i<num;i++)
@@ -137,13 +166,17 @@ void have(char *path)
 	DIR *dir;
 	int i = 0;
 	int number = 0;
-	char a[256][PATH_MAX+1];
+	char a[10000][256];
 	struct dirent *ptr;
 	dir = opendir(path);
 	if(dir == NULL)
 		my_err("opendir",__LINE__);
 	while((ptr = readdir(dir))!=NULL)
 	{
+		if(ptr < 0)
+			continue;
+		if(ptr->d_name[0] == '.' && biaozhi == 0);
+			continue;
 		strcpy(a[i],ptr->d_name);
 		a[i][strlen(a[i])+1] = '\0';
 		i++;
@@ -158,24 +191,40 @@ void have2(char *path)
 	DIR *dir;
 	int i = 0;
 	int number = 0;
+	DIR *dir2;
 	struct stat buf;
-	char a[256][PATH_MAX+1];
+	char a[10000][256];
 	struct dirent *ptr;
 	dir = opendir(path);
 	char b[10];
 	if(dir == NULL)
 		my_err("opendir",__LINE__);
+	chdir(path);
 	while((ptr = readdir(dir))!=NULL)
 	{
+		if(strcmp(ptr->d_name,"4523") ==0)
+			continue;
+		if(opendir(ptr->d_name) < 0)
+			continue;
+		if(ptr->d_name[0] == '.' && biaozhi == 0)
+			continue;
+		if(lstat(ptr->d_name,&buf)<0)
+			continue;
 		strcpy(a[i],ptr->d_name);
 		a[i][strlen(ptr->d_name)+1] = '\0';
 		i++;
 		number++;
 	}
-	chdir(path);
+//	chdir(path);
 	for(i=0;i<number;i++)
 	{	
-		lstat(a[i],&buf);
+		if(lstat(a[i],&buf)<0)
+			continue;
+		if(S_ISDIR(buf.st_mode))
+		{
+			if((dir2 = opendir(a[i])) < 0)
+				continue;
+		}
 		print_file(buf,a[i]);
 	}
 }
@@ -199,16 +248,19 @@ void R(struct rrr *head)
 			p = p->next;
 			continue;
 		}
+	//	dir = opendir(p->a);
 		while((ptr = readdir(dir)) != NULL)
 		{
 			if(strcmp(ptr->d_name,".")==0)
 				continue;
 			if(strcmp(ptr->d_name,"..") == 0)
 				continue;
+			if(ptr->d_name[0] == '.')
+				continue;
 			strcpy(arr,ptr->d_name);
-			printf("%-40s",arr);
+			printf("%-15s",arr);
 			haha += 1;
-			if(haha == 2)
+			if(haha == 4)
 			{
 				printf("\n");
 				haha = 0;
@@ -249,6 +301,9 @@ void LR(struct rrr *head)
 {
 	DIR *dir;
 	int k;
+	DIR *dir2;
+	struct passwd *pwd; //从该结构体获取文件所有者的名字
+	struct group *grp; //从该结构体获取文件组名
 	struct stat buf;
 	char arr[256];
 	struct dirent *ptr;
@@ -268,9 +323,23 @@ void LR(struct rrr *head)
 				continue;
 			if(strcmp(ptr->d_name,"..") == 0)
 				continue;
+			if(strcmp(ptr->d_name,"proc")==0)
+				continue;
+			if(strcmp(ptr->d_name,"mimetypes") == 0)
+				continue;
+			if(ptr->d_name[0] == '.')
+				continue;
+			if(strcmp(ptr->d_name,"OS")==0)
+				continue;
 			strcpy(arr,ptr->d_name);
 			sprintf(arr,"%s%s",p->a,ptr->d_name);
-			lstat(arr,&buf);
+			if(lstat(arr,&buf) < 0)
+				continue;
+			if(buf.st_uid != 0 && buf.st_uid != 1000)
+				continue;
+			pwd = getpwuid(buf.st_uid);
+			if(strcmp(pwd->pw_name,"root")!=0 && strcmp(pwd->pw_name,"xzwb")!=0)
+				continue;
 			print_file(buf,arr);
 			if(S_ISDIR(buf.st_mode))
 			{
@@ -308,10 +377,12 @@ int main(int argc,char *argv[])
 	int choose=0;
 	int i,j,k,m=0,num=0,c;
 	struct stat buf;
+	char *hen[256];
+	int pid;
 	if(argc==1)
  	{
 		strcpy(path,"./");
-		have2(path);
+		have(path);
 		return 0;
 	}
 	for(i=1;i<argc;i++)
@@ -355,11 +426,13 @@ int main(int argc,char *argv[])
 			{
 				case 1:
 					{
+						biaozhi = 1;
 						have(path);
 						break;
 					}
 				case 2:
 					{
+						biaozhi = 0;
 						have2(path);
 						break;
 					}
@@ -370,6 +443,7 @@ int main(int argc,char *argv[])
 					}
 				case 3:
 					{
+						biaozhi = 1;
 						have2(path);
 						break;
 					}
@@ -383,9 +457,15 @@ int main(int argc,char *argv[])
 						LR(head);
 						break;
 					}
+				case 5:
+					{
+						R(head);
+						break;
+					}
 				case 0:
 					{
-					       have2(path);
+						biaozhi = 0;
+					       have(path);
 					       break;
 				        }
 				default:break;
@@ -426,6 +506,11 @@ int main(int argc,char *argv[])
 						print_file(buf,path);
 						break;
 					}
+				case 5:
+					{
+						printf("%s\n",path);
+						break;
+					}
 				default:break;
 			}
 		}
@@ -441,11 +526,13 @@ int main(int argc,char *argv[])
 		{
 			case 1:
 				{
+					biaozhi = 0;
 					have(path);
 					break;
 				}
 			case 2:
 				{
+					biaozhi = 1;
 					have2(path);
 					break;
 				}
@@ -461,15 +548,23 @@ int main(int argc,char *argv[])
 				}
 			case 3:
 				{
+					biaozhi = 1;
 					have2(path);
 					break;
 				}
 			case 7:
 				{
 					LR(head);
+					break;
+				}
+			case 5:
+				{
+					R(head);
+					break;
 				}
 			default:break;
 		}	
 	}
 	return 0;
 }
+

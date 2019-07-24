@@ -3,6 +3,7 @@
 
 int main()
 {
+	int number = 0;
 	char a[201];
 	int k;
 	int i,j=0;
@@ -23,25 +24,28 @@ int main()
 		}
 		if(strcmp(a,"ENDOFINPUT")==0 && j == 0)
 			break;
-		k = strlen(a);
-		for(i=0;i<k;i++)
+		if(j!=0)
 		{
-			if(a[i] == 'A')
-				a[i] = 'V';
-			else if(a[i] == 'B')
-				a[i] = 'W';
-			else if(a[i] == 'C')
-				a[i] = 'X';
-			else if(a[i] == 'D')
-				a[i] = 'Y';
-			else if(a[i] == 'E')
-				a[i] = 'Z';
-			else if(a[i]>90 || a[i]<65)
-				continue;
-			else if(a[i]>=70 && a[i]<=90)
-				a[i] = a[i]-5;
+			k = strlen(a);
+			for(i=0;i<k;i++)
+			{
+				if(a[i] == 'A')
+					a[i] = 'V';
+				else if(a[i] == 'B')
+					a[i] = 'W';
+				else if(a[i] == 'C')
+					a[i] = 'X';
+				else if(a[i] == 'D')
+					a[i] = 'Y';
+				else if(a[i] == 'E')
+					a[i] = 'Z';
+				else if(a[i]>90 || a[i]<65)
+					continue;
+				else if(a[i]>=70 && a[i]<=90)
+					a[i] = a[i]-5;
+			}
 		}
-		if(i==k)
+		if(j==1)
 			puts(a);
 	}
 	return 0;
