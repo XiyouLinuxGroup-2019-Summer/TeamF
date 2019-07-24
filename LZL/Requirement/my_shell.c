@@ -12,42 +12,42 @@
 #define out_redirect 1   //输出重定向
 #define in_redirect  2   //输入重定向
 #define have_pipe    3   //有管道
+char arglist[100][256];
 
 void print_promt();
-void get_input(char a[]);
+void get_input();
 void explain_input(char *,int *,char a[100][256]);
 void do_cmd(int , char a[100][256]);
 int find_command(char *);
 
 int main(int argc,char **argv)
 {
-    int i;
-    int argcount;
-    char arglist[100][256];
+    int i=0;
+    int argcount=0;
     char **arg=NULL;
-/*     buf=(char*)malloc(sizeof(char)*256);
+    char *buf=NULL;
+    buf=(char*)malloc(256);
+    if(buf==NULL)
+    {
+        perror("mallic failture\n");
+        exit(0);
+    }
     if(buf==NULL)
     {
         perror("error in malloc\n");
         exit(1);
-    } */
-    char buf[256];
+    }
     while(1){
-        memset(buf,0,sizeof(buf));
+        memset(buf,0,256);
         print_promt();
-        //printf("%d\n",sizeof(buf));
-        //get_input(buf);
-        scanf("%s",buf);
-        printf("fdg");
+        get_input(buf);
+        //fgets(buf,sizeof(buf),stdin);
         if(!strcmp(buf,"exit") || !strcmp(buf,"logout")) break;
-        printf("asd");
         for(i=0;i<100;i++) arglist[i][0]='\0';
-        printf("sadd");
         argcount=0;
         explain_input(buf,&argcount,arglist);
         do_cmd(argcount,arglist);    
     }
-    if(buf!=NULL)
     free(buf);
     exit(0);
 }
@@ -57,12 +57,10 @@ void print_promt()
     printf("myshell$$:");
 }
 
-void get_input(char buf[])
+void get_input(char *buf)
 {
-/*     int len=0;
-    char ch;
-    buf[100]='p';
-    printf("%c\n",buf[100]);
+    int len=0;
+    char ch='\0';
     ch=getchar();
     while(len<256)
     {
@@ -70,18 +68,13 @@ void get_input(char buf[])
         buf[len++]=ch;
         ch=getchar();
     }
-    printf("asdasdasd");
     if(len==256)
     {
-        perror("command is to long !\n");
-        exit(1);
+        perror("command is too long \n");
+        return 0;
     }
-    printf("1232");
     buf[len++]='\n';       //加个回车的意义在哪里
-    printf("asdasd");
     buf[len]='\0';
-    printf("asd"); */
-    gets(buf);
 }
 
 void explain_input(char *buf,int *argcount,char arglist[100][256])
@@ -117,19 +110,20 @@ void do_cmd(int argcount,char arglist[100][256])
     int how=0;     //检测是否存在重定向 管道
     int background=0;  //判断是否存在后台运行符
     int status=0;
-    int i;
-    int fd;
+    int i=0;
+    int fd=0;
     char *arg[argcount+1];
     char *argnext[argcount+1];
     char *file;
-    pid_t pid;
+    pid_t pid=0;
 
     for(i=0;i<argcount;i++)
     {
-        arg[i]=arglist[i];
+        arg[i]=(char*)arglist[i];
     }
     arg[argcount]=NULL;
-    for(i=0;i<argcount;i++)
+    
+/*     for(i=0;i<argcount;i++)
     {
         if(strncmp(arg[i],'&',1)==0)
         {
@@ -144,7 +138,7 @@ void do_cmd(int argcount,char arglist[100][256])
                 return;
             }
         }
-    }
+    } */
     for(i=0;arg[i]!=NULL;i++)
     {
         if(!strcmp(arg[i],">"))
@@ -231,7 +225,7 @@ void do_cmd(int argcount,char arglist[100][256])
         case 0:     //没有什么参数
             if(pid==0)
             {
-                if(!find_command(arg))
+                if(!find_command(arg[0]))
                 {
                     perror("can't find this command!\n");
                     exit(0);
@@ -254,12 +248,12 @@ void do_cmd(int argcount,char arglist[100][256])
                 exit(0);
             }
             break;
-        case 2:    //输出重定向
+        case 2:    //输入重定向
             if(pid==0)
             {
-                if(!find_command(arg))
+                if(!find_command(arg[0]))
                 {
-                    perror("can't find this command!\n");
+                    printf("%s :Command can not found\n",arg[0]);
                     exit(0);
                 }
                 fd=open(file,O_RDONLY);
@@ -272,18 +266,18 @@ void do_cmd(int argcount,char arglist[100][256])
             if(pid==0)
             {
                 int pid2=0;
-                int fd2;
-                int status;
+                int fd2=0;
+                int status=0;
                 if((pid2=fork())<0)   //子进程再次分离一个子进程
                 {
                     perror("error in fork\n");
                     exit(0);
                 }
-                if(pid2==0)
+                else if(pid2==0)  //子进程
                 {
-                    if(!find_command(arg))
+                    if(!find_command(arg[0]))
                     {
-                        perror("can't find this command!\n");
+                        printf("%s :Command can not found\n",arg[0]);
                         exit(1);
                     }
                     fd2=open("/tmp/youdontnofile",O_WRONLY|O_CREAT|O_TRUNC,0644);
@@ -298,7 +292,7 @@ void do_cmd(int argcount,char arglist[100][256])
                 }
                 if(!find_command(argnext[0]))
                 {
-                    perror("can't find this command!\n");
+                    printf("%s :Command can not found\n",argnext[0]);
                     exit(1);
                 }
                 fd2=open("/tmp/youdontnofile",O_RDONLY);
@@ -307,8 +301,8 @@ void do_cmd(int argcount,char arglist[100][256])
                 if(remove("/tmp/youdontnofile"))
                 {
                     perror("error in remove\n");
-                    exit(1);
                 }
+                exit(1);
             }
             break;
         default:
@@ -327,6 +321,7 @@ void do_cmd(int argcount,char arglist[100][256])
 
 int find_command(char *command)
 {
+    printf(":%s\n",command);
     DIR* dp;
     struct dirent* dirp;
     char *path[]={"./","/bin","/usr/bin",NULL};
@@ -336,14 +331,15 @@ int find_command(char *command)
     }
     int i=0;
     while(path[i]!=NULL){
-        if(dp=opendir(path[i])==-1)
+        if((dp=opendir(path[i]))==NULL)
         {
             perror("error in opendir\n");
             exit(1);
         }
-        while(dirp=readdir(dp)!=NULL){
+        while((dirp=readdir(dp))!=NULL){
             if(!strcmp(dirp->d_name,command))
             {
+                printf("找到！\n");
                 close(dp);
                 return 1;
             }

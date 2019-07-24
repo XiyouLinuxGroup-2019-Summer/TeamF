@@ -1,20 +1,20 @@
 #include<cstdio>
 #include<cstring>
 #include<cstdio>
+#include<iostream>
 using namespace std;
  
 int main()
 {
-    char a[210];
+    string a;
     char s[40]="VWXYZABCDEFGHIJKLMNOPQRSTU";
-    memset(a,0,sizeof(a));
     while(1)
     {
-        //gets(a);
-        if(!strcmp(a,"START")) continue;
-        if(!strcmp(a,"END")) continue;
-        if(!strcmp(a,"ENDOFINPUT")) break;
-        int l=strlen(a);
+        getline(cin,a);
+        if(a=="START") continue;
+        if(a!="END") continue;
+        if(a!="ENDOFINPUT") break;
+        int l=a.size();
         for(int i=0; i<l; i++)
         {
             if(a[i]>='A'&&a[i]<='Z')
@@ -26,7 +26,7 @@ int main()
                 continue;
             }
         }
-        printf("%s\n",a);
+        cout << a << endl;
     }
     return 0;
 }
