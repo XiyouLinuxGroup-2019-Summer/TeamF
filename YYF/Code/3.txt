@@ -1,0 +1,32 @@
+总用量 88
+drwxr-xr-x 2 xzwb xzwb  4096 7月  23 09:29 .
+drwxr-xr-x 8 xzwb xzwb  4096 7月  23 08:06 ..
+-rwx------ 1 xzwb xzwb  1476 7月  23 09:14 1.txt
+-rwx------ 1 xzwb xzwb     0 7月  23 09:29 3.txt
+-rwxr-xr-x 1 xzwb xzwb 13640 7月  23 08:57 a.out
+-rw-r--r-- 1 xzwb xzwb   404 7月  19 11:07 chmod2.c
+-rw-r--r-- 1 xzwb xzwb   208 7月  22 11:08 fork1.c
+-rw-r--r-- 1 xzwb xzwb   348 7月  22 10:45 fork2.c
+-rw-r--r-- 1 xzwb xzwb    81 7月  22 11:14 fork3.c
+-rw-r--r-- 1 xzwb xzwb   671 7月  19 11:00 my_chmod.c
+-rw-r--r-- 1 xzwb xzwb   366 7月  19 09:50 my_creat.c
+-rw-r--r-- 1 xzwb xzwb  7510 7月  22 09:59 my_ls.c
+-rw-r--r-- 1 xzwb xzwb   918 7月  19 10:30 my_rwl.c
+-rwxr-xr-x 1 xzwb xzwb 17864 7月  23 09:28 my_shell
+-rw-r--r-- 1 xzwb xzwb  3845 7月  23 09:28 my_shell.c
+总用量 92
+drwxr-xr-x 2 xzwb xzwb  4096 7月  23 09:29 .
+drwxr-xr-x 8 xzwb xzwb  4096 7月  23 08:06 ..
+-rwx------ 1 xzwb xzwb  1476 7月  23 09:14 1.txt
+-rwx------ 1 xzwb xzwb   788 7月  23 09:29 3.txt
+-rwxr-xr-x 1 xzwb xzwb 13640 7月  23 08:57 a.out
+-rw-r--r-- 1 xzwb xzwb   404 7月  19 11:07 chmod2.c
+-rw-r--r-- 1 xzwb xzwb   208 7月  22 11:08 fork1.c
+-rw-r--r-- 1 xzwb xzwb   348 7月  22 10:45 fork2.c
+-rw-r--r-- 1 xzwb xzwb    81 7月  22 11:14 fork3.c
+-rw-r--r-- 1 xzwb xzwb   671 7月  19 11:00 my_chmod.c
+-rw-r--r-- 1 xzwb xzwb   366 7月  19 09:50 my_creat.c
+-rw-r--r-- 1 xzwb xzwb  7510 7月  22 09:59 my_ls.c
+-rw-r--r-- 1 xzwb xzwb   918 7月  19 10:30 my_rwl.c
+-rwxr-xr-x 1 xzwb xzwb 17864 7月  23 09:28 my_shell
+-rw-r--r-- 1 xzwb xzwb  3845 7月  23 09:28 my_shell.c

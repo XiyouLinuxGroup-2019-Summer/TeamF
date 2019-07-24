@@ -84,7 +84,7 @@ void explain_input(char *buf , int *cont , char list[100][256])
 }
 
 //内置命令直接执行
-void in_cd(char list[100][256],int *cont)
+void in_cd(char list[100][256],int cont)
 {
 	if(strcmp(list[0],"cd") != 0)
 		return;
@@ -118,11 +118,140 @@ void in_command(char list[100][256] , int cont)
 	pid_t pid;
 	int i;
 	int fd;
+	int he;
+	int statu;
 	char *arg[256];
+	char *arg2[256];
+	char *file;
 	for(i=0;i<cont;i++)
 		arg[i] = (char*)list[i];
 	arg[cont] = NULL;
+	for(i=0;i<cont;i++)
+	{
+		if(strcmp(arg[i],">")==0)
+		{
+			file = arg[i+1];
+			how += 1;
+			he = i;
+		}
+		if(strcmp(arg[i],"<")==0)
+		{
+			file = arg[i+1];
+			how += 2;
+			he = i;
+		}
+		if(strcmp(arg[i],">>")==0)
+		{
+			file = arg[i+1];
+			how += 11;
+			he = i;
+		}
+		if(strcmp(arg[i],"<<")==0)
+		{
+			file = arg[i+1];
+			how += 22;
+			he = i;
+		}
+		if(strcmp(arg[i],"|")==0)
+		{
+			for(int j = i+1 ; j < cont;j++)
+				arg2[j] = arg[j];
+			how += 4;
+			he = i;
+		}
+		if(strcmp(arg[i],"&")==0)
+		{
+			arg[i] = NULL;
+			background += 1;
+		}
+	}
+	if(how!=0)
+		arg[he] = NULL;
+	if(background == 1 && strcmp(list[cont-1],"&") != 0)
+		background--;
+	if((pid = fork())<0)
+		perror("fork error\n");
+	if(pid == 0)
+	{
+		switch(how)
+		{
+			case 0:
+				{
+					execvp(arg[0],arg);
+					exit(0);
+					break;
+				}
+			case 1:
+				{
+					fd = open(file,O_RDWR|O_CREAT|O_TRUNC,S_IRWXU);
+					dup2(fd,1);
+					execvp(arg[0],arg);
+					exit(0);
+					break;
+				}
+			case 2:
+				{
+					if(fd = open(file,O_RDONLY) < 0)
+						perror("open");
+					dup2(fd,0);
+					execvp(arg[0],arg);
+					exit(0);
+					break;
+				}
+			case 11:
+				{
+					fd = open(file,O_RDWR|O_CREAT|O_APPEND,S_IRWXU);
+					dup2(fd,1);
+					execvp(arg[0],arg);
+					exit(0);
+					break;
+				}
+			case 22:
+				{
+					if(fd = open(file,O_RDONLY) < 0)
+						perror("open");
+					dup2(fd,0);
+					execvp(arg[0],arg);
+					exit(0);
+					break;
+				}
+			case 4:
+				{
+					int pid2;
+					int satu;
+					int fd2;
+					if(pid2 = fork() < 0)
+						perror("fork error");
+					if(pid2 == 0)
+					{
+						if(fd2 = open("/home/xzwb/TeamF/YYF/Code/1.txt",O_RDWR|O_CREAT|O_TRUNC,S_IRWXU) < 0)
+							perror("open");
+						dup2(fd2,1);
+						execvp(arg[0],arg);
+						exit(0);
+					}
+					waitpid(pid2,&satu,0);
+					fd2 = open("/home/xzwb/TeamF/YYF/Code/1.txt",O_RDONLY);
+					dup2(fd2,0);
+					execvp(arg2[0],arg2);
+					exit(0);
+					break;
+				}
+			default:printf("输入错误!\n");
+		}
+	}
+	if(background == 1)
+		return;
+	if(background == 0)
+		waitpid(pid,&statu,0);
+}
 
+static void mask_ctrl_c()
+{                                                         
+  	   sigset_t intmask;           
+   	  sigemptyset(&intmask);             
+	     sigaddset(&intmask,SIGINT);             
+	     sigprocmask(SIG_BLOCK,&intmask,NULL);           
 }
 
 int main()
@@ -131,11 +260,15 @@ int main()
 	int cont;
 	char list[100][256];
 	char *buf = (char*)malloc(sizeof(256));
+	 mask_ctrl_c();
 	while(1)
 	{
-	print_prompt();
-	get_input(buf);
-	explain_input(buf,&cont,list);
-	in_cd(list,&cont);
+		print_prompt();
+		get_input(buf);
+		if(strcmp(buf,"exit\n") == 0)
+			exit(0);
+		explain_input(buf,&cont,list);
+		in_cd(list,cont);
+		in_command(list,cont);
 	}
 }

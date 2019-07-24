@@ -4,36 +4,44 @@ int main()
 {
 	int t;
 	int n;
-	int i,j,k,m,c,d;
+	int i,j,k2=0,k1=0;
 	int cont;
-	long b;
-	long a[101];
+	int b;
 	scanf("%d",&t);
 	for(i=0;i<t;i++)
 	{
+		k1 = 0;
+		k2 = 0;
 		cont = 0;
-		k = 0;
 		scanf("%d",&n);
 		for(j=0;j<n;j++)
 		{
-			scanf("%ld",&b);
-			if(b%3==0 && b!=0)
-			{
+			scanf("%d",&b);
+			if(b%3==0)
 				cont++;	
-				continue;
-			}
-			a[k] = b;
-			k++;
-		}
-		for(j=0;j<k-1;j++)
-		{
-			for(m=j+1;m<k;m++)
+			else
 			{
-				if((a[j]+a[k])%3 == 0)
-				{
-					
-				}
+				if(b%3 == 2)
+					k2++;
+				else if(b%3 == 1)
+					k1++;
 			}
+		}	
+		if(k2>=k1 && k1!=0)
+		{
+			cont += k1;
+			k2 = k2-k1;
+			cont += k2/3;
 		}
+		else if(k2>=k1 && k1==0)
+			cont += k2/3;
+		else if(k1>k2)
+		{
+			cont += k2;
+			k1 = k1-k2;
+			cont += k1/3;
+		}
+		printf("%d\n",cont);
+
 	}
 }
