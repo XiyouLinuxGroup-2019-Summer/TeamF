@@ -52,7 +52,7 @@ int main()
                 {
                     book[flag]=!book[flag];
                     flag=book[flag]?(flag*2):flag*2+1;
-                    if(flag>((1<<tmpa)-1)) break;
+                    if(flag>((1<<tmpa)-1)) break;         //很漂亮的代码 可惜超时了
                 }
             }
             cout << flag/2 << endl;
