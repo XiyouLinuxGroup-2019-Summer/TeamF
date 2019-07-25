@@ -8,7 +8,8 @@
 #include<sys/stat.h>
 #include<dirent.h>
 #include<signal.h>
-
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #define normal       0   //正常
 #define out_redirect 1   //输出重定向
@@ -18,20 +19,23 @@
 char arglist[100][256];
 
 void print_promt();
-void get_input();
+void get_input(char **buf);
 void explain_input(char *,int *,char a[100][256]);
 void do_cmd(int , char a[100][256]);
 int find_command(char *);
+/* char *readline (const char *prompt);//返回值就是读取的字符串
+void add_history(const char *string);//用来返回历史
+typedef char *rl_compentry_func_t(const char *text, int state);
+char **rl_completion_matches(const char *text, rl_compentry_func_t *entry_func); */
 int background=0;  //判断是否存在后台运行符
 
 void handler(int signo)
 {
-    setbuf(stdout,NULL);
     char tmp[256];
     char tmpa[256];
     int tt=0;
     getcwd(tmp,256);
-    int dd=strlen(tmp)-2;
+    int dd=strlen(tmp)-2;      //这段代码是提取出路径中的最后一个文件
     for(int i=dd;i>=0;i--)
     {
         if(tmp[i]=='/')
@@ -41,9 +45,21 @@ void handler(int signo)
         }
     }
     for(int i=tt;i<=dd+1;i++) tmpa[i-tt]=tmp[i];
-    tmpa[dd+2]='\0';
-    printf("\n错误!my_shell@%s$$:",tmpa);
-    setbuf(stdout,_IO_BUFSIZ);
+    tmpa[dd+2-tt]='\0'; 
+    printf("\001\033[1m\002");
+    printf("\033[34m");
+    printf("\n错误!my_shell@%s$$:",tmp);
+    printf("\001\033[0m\002");
+    //setbuf(stdout,_IO_BUFSIZ);
+}
+
+void ShowHistory()
+{
+    int i = 0;
+    HIST_ENTRY ** his;
+    his = history_list();
+    while(his[i] != NULL)
+    printf("%s\n", his[i++]->line);
 }
 
 int my_cd(char *buf)
@@ -55,28 +71,39 @@ int my_cd(char *buf)
 
 int main(int argc,char **argv)
 {
+    system("clear");
+    setbuf(stdout,NULL);       /*程序在接受到SIGINT信号时转入的
+    处理函数不处理缓冲区会转入下一行 可以删除掉看看*/
+    read_history(NULL);    //默认在~/.history
     int i=0;
     int argcount=0;
     char **arg=NULL;
-    char *buf=NULL;
-    buf=(char*)malloc(256);
     signal(SIGINT,handler);
-    if(buf==NULL)
-    {
-        perror("error in malloc\n");
-        exit(1);
-    }
     while(1){
+        char *buf=(char*)malloc(256);
+        if(buf==NULL)
+        {
+            perror("error in malloc\n");
+            exit(1);
+        }
         background=0;
         memset(buf,0,256);
         print_promt();
-        get_input(buf);
+        get_input(&buf);
         if(!strcmp(buf,"exit") || !strcmp(buf,"logout")) break;
         for(i=0;i<100;i++) arglist[i][0]='\0';
         argcount=0;
         explain_input(buf,&argcount,arglist);
+        if(!strcmp(buf,"history"))
+        {
+            ShowHistory();
+            continue;
+        }
+/*         for(int i=0;i<argcount;i++)
+        printf("%s\n",arglist[i]); */
         if(!strcmp(arglist[0],"cd"))
         {
+            arglist[1][strlen(arglist[1])]='\0';
             if(my_cd(arglist[1]))
             {
                 char tmp_file[256];
@@ -92,8 +119,8 @@ int main(int argc,char **argv)
             }
         }
         do_cmd(argcount,arglist);    
+        free(buf);
     }
-    free(buf);
     exit(0);
 }
 
@@ -115,28 +142,35 @@ void print_promt()
     }
     for(int i=tt;i<=dd+1;i++) tmpa[i-tt]=tmp[i];
     tmpa[dd+2]='\0';
+    printf("\001\033[1m\002");
+    printf("\033[34m");
     printf("\nmy_shell@%s$$:",tmpa);
-    setbuf(stdout,_IO_BUFSIZ);
+    printf("\001\033[0m\002");
+    //setbuf(stdout,_IO_BUFSIZ);
 }
 
-void get_input(char *buf)
+void get_input(char **buf)
 {
     int len=0;
     char ch='\0';
-    ch=getchar();
+/*     ch=getchar();
     while(len<256)
     {
         if(ch=='\n') break;
         buf[len++]=ch;
         ch=getchar();
-    }
+    } */
+    *buf=readline(" ");
+    add_history(*buf);
+    write_history(NULL);
     if(len==256)
+
     {
         perror("command is too long \n");
         return 0;
     }
     //buf[len++]='\n';       //加个回车的意义在哪里
-    buf[len]='\0';
+    //(*buf)[len]='\0';
 }
 
 void explain_input(char *buf,int *argcount,char arglist[100][256])
