@@ -1,0 +1,6 @@
+cd ../
+ls -al
+history
+cd ../
+history
+exit

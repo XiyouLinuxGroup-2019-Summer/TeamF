@@ -13,6 +13,7 @@ using namespace std;
 HIST_ENTRY **ptr;
 int main()
 {
+    setbuf(stdout,NULL);
     while(1)
     {
         char *p=readline(BEGIN(49, 34)"Myshell $ "CLOSE);
