@@ -235,13 +235,13 @@ void display(int flag,char *pathname)  //传入一个路径名
             if(tmp[0]!='.')
             {
                 display_attribute(buf,tmp);
-                printf("  %s\n",tmp);
             }
             break;
         case PARAM_A+PARAM_L:
                 //printf("ok :  %s \n",pathname);
                 display_attribute(buf,name);
-                printf("  %s\n",tmp);
+                printf(" %s",name);
+                putchar('\n');
                 break;
         default:
             break;
@@ -347,7 +347,6 @@ int main(int argc ,char ** argv)
     {
         strcpy(path,"./");  //没有参数的话默认为当前目录
         path[2]='\0';
-        printf("%d  :flag_param: \n",ff);
         display_dir(flag_param,path);
         return 0;
     }
@@ -377,12 +376,10 @@ int main(int argc ,char ** argv)
                 {
                     path[strlen(argv[i])]='\0';
                 }
-                printf(":%d  :flag_param ok  : %d\n",ff,flag_param);
                 display_dir(flag_param,path);
 
             }else
             {
-                printf("l    :%d  :flag_param ok  : %d\n",ff,flag_param);
                 display(flag_param,path);//参数为一个文件
             }
             i++;

@@ -7,11 +7,14 @@
 #include<sys/wait.h>
 #include<sys/stat.h>
 #include<dirent.h>
+#include<signal.h>
+
 
 #define normal       0   //正常
 #define out_redirect 1   //输出重定向
 #define in_redirect  2   //输入重定向
 #define have_pipe    3   //有管道
+#define out_redirect_leijia  4 //累加输出重定向
 char arglist[100][256];
 
 void print_promt();
@@ -19,6 +22,36 @@ void get_input();
 void explain_input(char *,int *,char a[100][256]);
 void do_cmd(int , char a[100][256]);
 int find_command(char *);
+int background=0;  //判断是否存在后台运行符
+
+void handler(int signo)
+{
+    setbuf(stdout,NULL);
+    char tmp[256];
+    char tmpa[256];
+    int tt=0;
+    getcwd(tmp,256);
+    int dd=strlen(tmp)-2;
+    for(int i=dd;i>=0;i--)
+    {
+        if(tmp[i]=='/')
+        {
+            tt=i;
+            break;
+        }
+    }
+    for(int i=tt;i<=dd+1;i++) tmpa[i-tt]=tmp[i];
+    tmpa[dd+2]='\0';
+    printf("\n错误!my_shell@%s$$:",tmpa);
+    setbuf(stdout,_IO_BUFSIZ);
+}
+
+int my_cd(char *buf)
+{
+    if(chdir(buf)<0)
+    return 0;
+    else return 1;
+}
 
 int main(int argc,char **argv)
 {
@@ -27,25 +60,37 @@ int main(int argc,char **argv)
     char **arg=NULL;
     char *buf=NULL;
     buf=(char*)malloc(256);
-    if(buf==NULL)
-    {
-        perror("mallic failture\n");
-        exit(0);
-    }
+    signal(SIGINT,handler);
     if(buf==NULL)
     {
         perror("error in malloc\n");
         exit(1);
     }
     while(1){
+        background=0;
         memset(buf,0,256);
         print_promt();
         get_input(buf);
-        //fgets(buf,sizeof(buf),stdin);
         if(!strcmp(buf,"exit") || !strcmp(buf,"logout")) break;
         for(i=0;i<100;i++) arglist[i][0]='\0';
         argcount=0;
         explain_input(buf,&argcount,arglist);
+        if(!strcmp(arglist[0],"cd"))
+        {
+            if(my_cd(arglist[1]))
+            {
+                char tmp_file[256];
+                getcwd(tmp_file,256);
+
+                //printf("%s\n",tmp_file);
+                continue;
+            }
+            else
+            {
+                printf("param error!\n");
+                continue;
+            }
+        }
         do_cmd(argcount,arglist);    
     }
     free(buf);
@@ -54,7 +99,24 @@ int main(int argc,char **argv)
 
 void print_promt()
 {
-    printf("myshell$$:");
+    setbuf(stdout,NULL);
+    char tmp[256];
+    char tmpa[256];
+    int tt=0;
+    getcwd(tmp,256);
+    int dd=strlen(tmp)-2;
+    for(int i=dd;i>=0;i--)
+    {
+        if(tmp[i]=='/')
+        {
+            tt=i;
+            break;
+        }
+    }
+    for(int i=tt;i<=dd+1;i++) tmpa[i-tt]=tmp[i];
+    tmpa[dd+2]='\0';
+    printf("\nmy_shell@%s$$:",tmpa);
+    setbuf(stdout,_IO_BUFSIZ);
 }
 
 void get_input(char *buf)
@@ -73,7 +135,7 @@ void get_input(char *buf)
         perror("command is too long \n");
         return 0;
     }
-    buf[len++]='\n';       //加个回车的意义在哪里
+    //buf[len++]='\n';       //加个回车的意义在哪里
     buf[len]='\0';
 }
 
@@ -82,6 +144,11 @@ void explain_input(char *buf,int *argcount,char arglist[100][256])
     char *q=buf;
     char *p=buf;
     int number=0;
+    for(int i=0;i<strlen(buf);i++)
+    if(buf[i]=='#')
+    {
+        background=1;  //判断是否存在后台运行符
+    }
     while(1)
     {
         if(p[0]=='\0')
@@ -108,7 +175,6 @@ void do_cmd(int argcount,char arglist[100][256])
 {
     int flag=0;
     int how=0;     //检测是否存在重定向 管道
-    int background=0;  //判断是否存在后台运行符
     int status=0;
     int i=0;
     int fd=0;
@@ -122,29 +188,22 @@ void do_cmd(int argcount,char arglist[100][256])
         arg[i]=(char*)arglist[i];
     }
     arg[argcount]=NULL;
-    
-/*     for(i=0;i<argcount;i++)
-    {
-        if(strncmp(arg[i],'&',1)==0)
-        {
-            if(i==argcount-1)
-            {
-                background=1;
-                arg[argcount-1]=NULL;
-                break;
-            }else
-            {
-                printf("wrong commond!\n");
-                return;
-            }
-        }
-    } */
     for(i=0;arg[i]!=NULL;i++)
     {
         if(!strcmp(arg[i],">"))
         {
             flag++;
             how=out_redirect;
+            if(arg[i+1]==NULL)
+            flag++;     //错误的格式
+        }
+    }
+    for(i=0;arg[i]!=NULL;i++)
+    {
+        if(!strcmp(arg[i],">>"))
+        {
+            flag++;
+            how=out_redirect_leijia;
             if(arg[i+1]==NULL)
             flag++;     //错误的格式
         }
@@ -180,7 +239,7 @@ void do_cmd(int argcount,char arglist[100][256])
     {
         for(i=0;arg[i]!=NULL;i++)
         {
-            if(strcmp(arg[i],"<")==0)
+            if(strcmp(arg[i],">")==0)
             {
                 file=arg[i+1];
                 arg[i]=NULL;
@@ -237,7 +296,7 @@ void do_cmd(int argcount,char arglist[100][256])
         case 1:    //输出重定向
             if(pid==0)
             {
-                if(!find_command(arg))
+                if(!find_command(arg[0]))
                 {
                     perror("can't find this command!\n");
                     exit(0);
@@ -305,6 +364,20 @@ void do_cmd(int argcount,char arglist[100][256])
                 exit(1);
             }
             break;
+        case 4:       
+            if(pid==0)
+                {
+                    if(!find_command(arg[0]))
+                    {
+                        perror("can't find this command!\n");
+                        exit(0);
+                    }
+                    fd=open(file,O_RDWR|O_CREAT|O_APPEND,0644); 
+                    dup2(fd,1);
+                    execvp(arg[0],arg);
+                    exit(0);
+                }
+                break;
         default:
             break;
     }
@@ -321,10 +394,9 @@ void do_cmd(int argcount,char arglist[100][256])
 
 int find_command(char *command)
 {
-    printf(":%s\n",command);
     DIR* dp;
     struct dirent* dirp;
-    char *path[]={"./","/bin","/usr/bin",NULL};
+    char *path[]={"./","/bin","/usr/bin","/home/lizhaolong/suanfa/TeamF/LZL/Requirement",NULL};
     if(strncmp(command,"./",2)==0)
     {
         command=command+2;//指针向后移动
@@ -339,7 +411,7 @@ int find_command(char *command)
         while((dirp=readdir(dp))!=NULL){
             if(!strcmp(dirp->d_name,command))
             {
-                printf("找到！\n");
+                //printf("找到！\n");
                 close(dp);
                 return 1;
             }
