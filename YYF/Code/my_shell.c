@@ -8,6 +8,9 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <pwd.h>
+#include <signal.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 struct dd{
 	char haha[2][256];
@@ -154,8 +157,10 @@ void in_command(char list[100][256] , int cont)
 		}
 		if(strcmp(arg[i],"|")==0)
 		{
-			for(int j = i+1 ; j < cont;j++)
-				arg2[j] = arg[j];
+			int c = 0;
+			for(int j = i+1 ; j < cont;j++,c++)
+				arg2[c] = arg[j];
+			arg2[c] = NULL;
 			how += 4;
 			he = i;
 		}
@@ -191,8 +196,9 @@ void in_command(char list[100][256] , int cont)
 				}
 			case 2:
 				{
-					if(fd = open(file,O_RDONLY) < 0)
-						perror("open");
+					if((fd = open(file,O_RDONLY,0644)) < 0)
+						printf("openfile falsh\n");
+					close(0);
 					dup2(fd,0);
 					execvp(arg[0],arg);
 					exit(0);
@@ -208,7 +214,7 @@ void in_command(char list[100][256] , int cont)
 				}
 			case 22:
 				{
-					if(fd = open(file,O_RDONLY) < 0)
+					if((fd = open(file,O_RDONLY)) < 0)
 						perror("open");
 					dup2(fd,0);
 					execvp(arg[0],arg);
@@ -220,20 +226,23 @@ void in_command(char list[100][256] , int cont)
 					int pid2;
 					int satu;
 					int fd2;
-					if(pid2 = fork() < 0)
+					if((pid2 = fork()) < 0)
 						perror("fork error");
 					if(pid2 == 0)
 					{
-						if(fd2 = open("/home/xzwb/TeamF/YYF/Code/1.txt",O_RDWR|O_CREAT|O_TRUNC,S_IRWXU) < 0)
+						if((fd2 = open("/tmp/1.txt",O_WRONLY|O_CREAT|O_TRUNC,0644)) < 0)
 							perror("open");
 						dup2(fd2,1);
 						execvp(arg[0],arg);
 						exit(0);
 					}
 					waitpid(pid2,&satu,0);
-					fd2 = open("/home/xzwb/TeamF/YYF/Code/1.txt",O_RDONLY);
+					close(fd2);
+					fd2 = open("/tmp/1.txt",O_RDONLY);
 					dup2(fd2,0);
 					execvp(arg2[0],arg2);
+					if(remove("/tmp/1.txt") < 0)
+						perror("remove error");
 					exit(0);
 					break;
 				}
@@ -246,29 +255,44 @@ void in_command(char list[100][256] , int cont)
 		waitpid(pid,&statu,0);
 }
 
-static void mask_ctrl_c()
-{                                                         
-  	   sigset_t intmask;           
-   	  sigemptyset(&intmask);             
-	     sigaddset(&intmask,SIGINT);             
-	     sigprocmask(SIG_BLOCK,&intmask,NULL);           
+static void mask_ctrl_c(int signo)
+{
+	printf("\n");
+	print_prompt();
+	fflush(stdout);
+}                         
+
+void history_ai(char list[100][256])
+{
+	if(strcmp(list[0],"history")==0)
+	{
+		read_history(NULL);
+	}
 }
 
 int main()
 {
 	cd.ha = 0;
 	int cont;
+	int len;
 	char list[100][256];
-	char *buf = (char*)malloc(sizeof(256));
-	 mask_ctrl_c();
+	signal(SIGINT,mask_ctrl_c);
 	while(1)
 	{
+		char *buf = (char*)malloc(sizeof(256));
+		memset(list,0,sizeof(list));
+		memset(buf,0,sizeof(buf));
 		print_prompt();
-		get_input(buf);
+		buf = readline("myshell&");
+		add_history(buf);
+		write_history(NULL);
+		buf[strlen(buf)] = '\n';		
 		if(strcmp(buf,"exit\n") == 0)
 			exit(0);
 		explain_input(buf,&cont,list);
 		in_cd(list,cont);
+		history_ai(list);
 		in_command(list,cont);
+		free(buf);
 	}
 }

@@ -7,9 +7,8 @@ int main()
 	char a[201];
 	int k;
 	int i,j=0;
-	while(1)
-	{
-		fgets(a,201,stdin);
+	while(fgets(a,201,stdin))
+	{	
 		k = strlen(a);
 		a[k-1] = '\0';
 		if(strcmp(a,"START")==0  && j==0)
@@ -29,7 +28,7 @@ int main()
 			k = strlen(a);
 			for(i=0;i<k;i++)
 			{
-				if(a[i] == 'A')
+				/*if(a[i] == 'A')
 					a[i] = 'V';
 				else if(a[i] == 'B')
 					a[i] = 'W';
@@ -38,7 +37,9 @@ int main()
 				else if(a[i] == 'D')
 					a[i] = 'Y';
 				else if(a[i] == 'E')
-					a[i] = 'Z';
+					a[i] = 'Z';*/
+				if(a[i] >= 65 && a[i] <= 69)
+					a[i] = a[i] + 21;
 				else if(a[i]>90 || a[i]<65)
 					continue;
 				else if(a[i]>=70 && a[i]<=90)
