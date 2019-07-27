@@ -93,6 +93,8 @@ void recursion(int flag_param,char * path)//本函数的意义是递归显示目
         }
         if(flag) continue;
         printf("\n%s:\n",book[k]);
+        if(strcmp("/var/lib/private/systemd",book[k])==0) continue;
+        if(strcmp("/proc/1380",book[k])==0) continue;
         recursion(flag_param,strcat(book[k],"/"));
         putchar('\n');
     }
@@ -218,6 +220,8 @@ void display(int flag,char *pathname)  //传入一个路径名
     name[j]='\0';
     char tmp[512];
     strcpy(tmp,name);
+    if(strcmp("/proc/1380",pathname)==0) return ;
+    if(strcmp("/var/lib/private/systemd",pathname)==0) return ;
     if(lstat(pathname,&buf)==-1)
     {
         my_err("stat",__LINE__);  //stat函数出现错误 进行精确到行的报错
@@ -250,7 +254,6 @@ void display(int flag,char *pathname)  //传入一个路径名
 
 void display_dir(int flag_param,char * path)
 {
-    //printf("%dbbb\n",flag_param);
     if(flag_param>=4) //证明有-R选项      //上面已经遍历此目录
     {
         recursion(flag_param,path);
