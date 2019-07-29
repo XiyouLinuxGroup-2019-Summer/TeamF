@@ -202,7 +202,7 @@ void have2(char *path)
 	chdir(path);
 	while((ptr = readdir(dir))!=NULL)
 	{
-		if(strcmp(ptr->d_name,"4523") ==0)
+		if(strcmp(ptr->d_name,"4312") ==0)
 			continue;
 		if(opendir(ptr->d_name) < 0)
 			continue;
