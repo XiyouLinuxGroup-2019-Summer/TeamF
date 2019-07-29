@@ -1,0 +1,9 @@
+总用量 24
+drwxr-xr-x 5 lizhaolong lizhaolong 4096 Jul 25 18:35 .
+drwxr-xr-x 8 lizhaolong lizhaolong 4096 Jul 25 13:29 ..
+-rw-r--r-- 1 lizhaolong lizhaolong    0 Jul 25 18:35 1.txt
+-rw-r--r-- 1 lizhaolong lizhaolong    0 Jul 22 19:08 .gitnore
+-rw------- 1 lizhaolong lizhaolong   19 Jul 25 13:15 history
+drwxr-xr-x 2 lizhaolong lizhaolong 4096 Jul 22 19:08 Report
+drwxr-xr-x 2 lizhaolong lizhaolong 4096 Jul 25 18:34 Requirement
+drwxr-xr-x 7 lizhaolong lizhaolong 4096 Jul 25 13:44 Solution

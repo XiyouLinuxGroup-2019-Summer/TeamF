@@ -18,6 +18,7 @@ struct Node
     int V;
     Node *lift,*right;
     Node():have_value(false),V(0),lift(nullptr),right(nullptr){}
+    //定义了默认构造函数
 };
 Node *root;
 

@@ -26,7 +26,7 @@ int find_command(char *);
 /* char *readline (const char *prompt);//返回值就是读取的字符串
 void add_history(const char *string);//用来返回历史
 typedef char *rl_compentry_func_t(const char *text, int state);
-char **rl_completion_matches(const char *text, rl_compentry_func_t *entry_func); */
+char **rl_completion_matches(const char *text, rl_compentry_func_t *entry_func);  */
 int background=0;  //判断是否存在后台运行符
 
 void handler(int signo)
@@ -160,7 +160,7 @@ void get_input(char **buf)
         buf[len++]=ch;
         ch=getchar();
     } */
-    *buf=readline(" ");
+    *buf=readline("my_shell@");
     add_history(*buf);
     write_history(NULL);
     if(len==256)
@@ -169,8 +169,6 @@ void get_input(char **buf)
         perror("command is too long \n");
         return 0;
     }
-    //buf[len++]='\n';       //加个回车的意义在哪里
-    //(*buf)[len]='\0';
 }
 
 void explain_input(char *buf,int *argcount,char arglist[100][256])
