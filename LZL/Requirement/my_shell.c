@@ -15,7 +15,7 @@
 #define out_redirect 1   //输出重定向
 #define in_redirect  2   //输入重定向
 #define have_pipe    3   //有管道
-#define out_redirect_leijia  4 //累加输出重定向
+#define out_redirect_acc  4 //累加输出重定向
 char arglist[100][256];
 
 void print_promt();
@@ -108,8 +108,6 @@ int main(int argc,char **argv)
             {
                 char tmp_file[256];
                 getcwd(tmp_file,256);
-
-                //printf("%s\n",tmp_file);
                 continue;
             }
             else
@@ -160,7 +158,7 @@ void get_input(char **buf)
         buf[len++]=ch;
         ch=getchar();
     } */
-    *buf=readline("my_shell@");
+    *buf=readline("my_shell@"); //不在这里加字符串可能会出现缓冲区问题 导致光标移动异常
     add_history(*buf);
     write_history(NULL);
     if(len==256)
@@ -235,7 +233,7 @@ void do_cmd(int argcount,char arglist[100][256])
         if(!strcmp(arg[i],">>"))
         {
             flag++;
-            how=out_redirect_leijia;
+            how=out_redirect_acc;
             if(arg[i+1]==NULL)
             flag++;     //错误的格式
         }
@@ -404,7 +402,7 @@ void do_cmd(int argcount,char arglist[100][256])
                         perror("can't find this command!\n");
                         exit(0);
                     }
-                    fd=open(file,O_RDWR|O_CREAT|O_APPEND,0644); 
+                    fd=open(file,O_RDWR|O_APPEND,0644); 
                     dup2(fd,1);
                     execvp(arg[0],arg);
                     exit(0);
@@ -429,6 +427,7 @@ int find_command(char *command)
     DIR* dp;
     struct dirent* dirp;
     char *path[]={"./","/bin","/usr/bin","/home/lizhaolong/suanfa/TeamF/LZL/Requirement",NULL};
+    //为了执行一些自己写的命令 所以加上了工作路径
     if(strncmp(command,"./",2)==0)
     {
         command=command+2;//指针向后移动
