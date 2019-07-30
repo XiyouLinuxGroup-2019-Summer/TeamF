@@ -1,11 +1,13 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 #include<errno.h>
 
 #define WSIZE 8 //双字数对齐 
 #define DSIZE 4 //单字数对齐
-#define CHUNKSIZE (1<<12) //扩展堆时的扩展的默认大小
-#define MAX_HEAP  (1<<14) //模拟虚拟内存大小
+#define CHUNKSIZE (1<<8) //扩展堆时的扩展的默认大小  
+//开小一点当然ok了　如果开太大会导致　gdb运行成功　正常跑程序会失败
+#define MAX_HEAP  (1<<12) //模拟虚拟内存大小
 #define MAX(x,y) ((x)>(y)?(x):(y))
 //因为此内存分配器使用边界分离法 所以第一个define实际是对边界的一个计算 分别为大小位和存在位
 #define PACK(size,alloc) ((size)|(alloc)) // 
@@ -19,7 +21,7 @@
 //位运算得到的答案其实就是最后一位 就是边界标记上的是否存在
 
 //bp -> block pointer 这两个宏函数通过当前指针位置计算头尾标记起始位
-#define HDRP(bp) ((char *)(bp) - WSIZE)//不太理解
+#define HDRP(bp) ((char *)(bp) - WSIZE)
 #define FTRP(bp) ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
 
 //计算next块的头 和prev块的尾
@@ -31,6 +33,7 @@ static char *mem_brk;     //heap 与 brk之间的代表已分配的虚拟内存 
 static char *mem_max_addr;//最大的模拟虚拟内存地址
 void *heap_listp;        //序言块与结尾块之间靠序言块那一侧的指针
 
+//所使用函数
 void men_init();
 void *mem_sbrk(int incr);
 int mm_init();
@@ -42,7 +45,8 @@ void *find_fit(size_t size);
 void *place(void *bp,size_t size);
 
 /*对我们的三个全局变量赋值　为了更贴近我们的实际　所以有了mem_brk 
-因为虚拟内存并不是初始时全部分配的　一个区域的集合　也就是按片分配的*/
+因为虚拟内存并不是初始时全部分配的　而是一个区域的集合　也就是按片分配的　
+我们可以打开/proc 中任意一个数字目录进入maps目录查看虚拟内存的映射*/
 void men_init()
 {
     mem_heap=(char*)malloc(MAX_HEAP);
@@ -67,7 +71,7 @@ void *mem_sbrk(int incr)
 //初始化堆　使其具有堆的头与尾　把这个作为一个范围　头：序言块　　位：结尾块
 int mm_init()
 {
-    if((heap_listp=mem_sbrk(4*WSIZE))==(void*) - 1) //证明虚拟内存不够
+    if((heap_listp = mem_sbrk(4*WSIZE))==(void*) - 1) //证明虚拟内存不够
     return -1;
     PUT(heap_listp,0);   //内存对齐块　处于堆刚开始时的位置
     PUT(heap_listp+WSIZE,PACK(DSIZE,1)); 
@@ -83,7 +87,7 @@ int mm_init()
     return -1;
 }
 
-static void *extend_heap(size_t word)
+static void *extend_heap(size_t word) //一个字四个字节
 {
     char *bp;
     size_t size;
@@ -100,7 +104,7 @@ static void *extend_heap(size_t word)
 
 void mm_free(void *bp)
 {
-    size_t size=GET_SIZE(bp);
+    size_t size=GET_SIZE(HDRP(bp));
 
     PUT(HDRP(bp),PACK(size,0));
     PUT(FTRP(bp),PACK(size,0));
@@ -112,7 +116,7 @@ static void* coalesce(void *bp)  //合并
     //得到当前块前后块的存在位信息
     size_t prev_alloc=GET_ALLOC(FTRP(PREV_BLKP(bp)));
     size_t next_alloc=GET_ALLOC(HDRP(NEXT_BLKP(bp)));
-    size_t size=GET_SIZE(bp);  //要初始化合并以后的空闲块
+    size_t size=GET_SIZE(HDRP(bp));  //要初始化合并以后的空闲块
     //对四种合并情况进行讨论
     if(prev_alloc && next_alloc)  //不进行合并
     {
@@ -147,13 +151,16 @@ void *mm_malloc(size_t size)
 
     if(size==0)
     return NULL;
-    else if (size < 2*DSIZE)
+    else if (size < 2*DSIZE) 
     asize = 2*DSIZE;
     else 
     asize = DSIZE*((size+DSIZE+DSIZE-1)/DSIZE);//进行字节对齐　加上两个标记位　一个为WSIZE
 
-    if((bp=find_fit(size))!=NULL) //命中　也就是说目前堆中已载入的空闲链表中有一和空闲块大于等于size
-    return bp;
+    if((bp=find_fit(asize))!=NULL) //命中　也就是说目前堆中已载入的空闲链表中有一个空闲块大于等于size
+    {
+        place(bp,asize);
+        return bp;
+    }
     extandsizes = MAX(asize,CHUNKSIZE);  //否则就是不命中的情况
     if((bp=extend_heap(extandsizes/DSIZE))==NULL)
     return NULL;   //说明虚拟内存已经消耗殆尽了
@@ -163,10 +170,11 @@ void *mm_malloc(size_t size)
 
 void *find_fit(size_t size)
 {
-    void *bp;  //策略为首次适配 因为有序言块　所以从heap_listp开始寻找 而不是mem_heap
-    for(bp = heap_listp;GET_SIZE(HDRP(bp));bp=NEXT_BLKP(bp))
-    if(!GET_ALLOC(bp) && GET_SIZE(HDRP(bp))>=size)
-    return bp;
+    void *bp;  //放置策略为首次适配 因为有序言块　所以从heap_listp开始寻找 而不是mem_heap
+    //printf("%d\n",GET_SIZE(HDRP(bp)));
+    for(bp = heap_listp;GET_SIZE(HDRP(bp))!=0;bp=NEXT_BLKP(bp)) //终止条件原因是终止块为零
+    if(!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp))>=size)
+    return bp; //找到匹配
     return NULL;
 }
 
@@ -177,13 +185,15 @@ void *place(void *bp,size_t size)
     {
         PUT(HDRP(bp),PACK(size,1));
         PUT(FTRP(bp),PACK(size,1));
-        bp=NEXT_BLKP(bp);//头被设为size 所以bp可定位到
+        *(FTRP(bp)-1)='\0';     //分配一个字符串末尾
+        bp=NEXT_BLKP(bp);//头的大小位被设为size 所以bp可定位到
         PUT(HDRP(bp),PACK(asize-size,0));
         PUT(FTRP(bp),PACK(asize-size,0));
     }else
     {
         PUT(HDRP(bp),PACK(asize,1));
         PUT(FTRP(bp),PACK(asize,1));
+        *(FTRP(bp)-1)='\0';
     }
 }
 
@@ -192,8 +202,18 @@ int main()
     men_init(); //初始化虚拟空间
     mm_init();  //初始化堆空间
     //具体的思路是当堆空间不够的时候进行重新分配　当虚拟空间不够的时候进行报错
-    char *tmp=(char*)mm_malloc(256);
-    *tmp="hgnbvnbvnaqweqwesderwerwerdsfsdf";
-    printf("%s\nasd\n",tmp);
+    char *tmp=(char*)mm_malloc(sizeof(char)*256);
+    strcpy(tmp,"hello world!");
+    strcat(tmp,"\0");
+    printf("::%s\n",tmp);
+    size_t bbb = GET_ALLOC(HDRP(tmp));
+    mm_free(tmp);
+    size_t aaa = GET_ALLOC(HDRP(tmp));
+    printf("%s\nend\n",tmp);
+    /*可以执行的原因是因为mm_free只是把标记改变而已 
+    本质上内存还是在刚开始我们malloc出的那个虚拟空间上 只不过这部分内存现在可以被mm_malloc分配 
+    也就是说值可以被改变　其实已经成了一个　假的“空悬指针”　*/
+    free(mem_heap); //防止内存泄露　
+    //写完这个程序　再看这个系统的free　真是别有一番感觉啊
     return 0;
 }
