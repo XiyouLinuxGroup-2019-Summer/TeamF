@@ -1,8 +1,14 @@
 #include <stdio.h>
-#include "my_err.h"
+#include "my_socket.h"
 
 int main()
 {
-	int i = 0;
-	my_err("hahahah",1);	
+	struct sockaddr_in cli;
+	int sock_fd = my_accept_seve();
+	int len;
+int ret = accept(sock_fd, (struct sockaddr*)&cli, &len);
+	printf("连接成功%d\n",ret);
+	while(1)
+	{
+	}
 }
