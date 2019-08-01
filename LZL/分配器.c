@@ -32,6 +32,7 @@ static char *mem_heap;    //用一个全局变量来保存堆顶 以便后面的
 static char *mem_brk;     //heap 与 brk之间的代表已分配的虚拟内存 brk与max_addr代表未分配的
 static char *mem_max_addr;//最大的模拟虚拟内存地址
 void *heap_listp;        //序言块与结尾块之间靠序言块那一侧的指针
+void *next_listp;         //下一次适配的全局变量
 
 //所使用函数
 void men_init();
@@ -42,11 +43,13 @@ void mm_free(void *bp);
 static void* coalesce(void *bp);
 void *mm_malloc(size_t size);
 void *find_fit(size_t size);
+void *next_find_fit(size_t size);
 void *place(void *bp,size_t size);
 
 /*对我们的三个全局变量赋值　为了更贴近我们的实际　所以有了mem_brk 
 因为虚拟内存并不是初始时全部分配的　而是一个区域的集合　也就是按片分配的　
-我们可以打开/proc 中任意一个数字目录进入maps目录查看虚拟内存的映射*/
+我们可以打开/proc 中任意一个数字目录进入maps目录查看虚拟内存的映射 显然是片状分配的
+*/
 void men_init()
 {
     mem_heap=(char*)malloc(MAX_HEAP);
@@ -62,7 +65,7 @@ void *mem_sbrk(int incr)
     {
         errno = ENOMEM;
         perror("error:ran out of memory!\n");
-        return (void*)-1; //没太看懂
+        return (void*)-1;
     }
     mem_brk=mem_brk+incr;
     return (void*)old_brk;  //malloc默认返回void类型指针
@@ -81,6 +84,7 @@ int mm_init()
     //在整个堆里有且只有一个结尾块　很特殊　size位为0 存在位为1
 
     heap_listp+=(2*WSIZE); 
+    next_listp=heap_listp;
     //在序言块之后　结尾块之前　创建一个带空闲块的堆 注意只有一个　意味这堆的初始往往只有一个
 
     if(extend_heap(CHUNKSIZE/WSIZE)==NULL)
@@ -159,12 +163,14 @@ void *mm_malloc(size_t size)
     if((bp=find_fit(asize))!=NULL) //命中　也就是说目前堆中已载入的空闲链表中有一个空闲块大于等于size
     {
         place(bp,asize);
+        next_listp=NEXT_BLKP(HDRP(bp)); //更新下一次适配标记位　同下
         return bp;
     }
     extandsizes = MAX(asize,CHUNKSIZE);  //否则就是不命中的情况
     if((bp=extend_heap(extandsizes/DSIZE))==NULL)
     return NULL;   //说明虚拟内存已经消耗殆尽了
     place(bp,asize);//asize个字节 进行内存替换　
+    next_listp=NEXT_BLKP(HDRP(bp));
     return bp;
 }
 
@@ -176,6 +182,24 @@ void *find_fit(size_t size)
     if(!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp))>=size)
     return bp; //找到匹配
     return NULL;
+}
+
+void *next_find_fit(size_t size) //放置策略为 下一次放置
+{
+    void *bp;  //放置策略为首次适配 因为有序言块　所以从heap_listp开始寻找 而不是mem_heap
+    //printf("%d\n",GET_SIZE(HDRP(bp)));
+    for(bp = next_listp;GET_SIZE(HDRP(bp))!=0;bp=NEXT_BLKP(bp)) //终止条件原因是终止块为零
+    if(!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp))>=size)
+    return bp; //找到匹配
+    else
+    {
+        if(bp=find_fit(size))
+        {
+            next_listp=NEXT_BLKP(HDRP(bp)); //更新下一次适配位
+            return bp;
+        }
+        return NULL;//从头开始还是没有找到的话进行从新分配块
+    }
 }
 
 void *place(void *bp,size_t size)
