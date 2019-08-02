@@ -23,6 +23,7 @@
 #define DIS_GROUP 17
 #define SEND_FILE 18
 
+
 typedef struct{
 	int               send_fd;              
 	int               recv_fd;
@@ -64,6 +65,7 @@ typedef struct{
         int               send_account; 	
 	char              send_nickname[20];
 }FLE;
+
 
 int               user_number;
 int               group_number;
