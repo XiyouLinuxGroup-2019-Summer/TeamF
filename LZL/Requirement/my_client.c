@@ -16,8 +16,8 @@ int my_recv(int conn_fd,char *data_buf,int len)
     static char recv_buf[BUFSIZ];  //8192
     static char *phread;
     static int len_remain = 0;
-    int   i;
-    if(len_remain<=0) //不清楚
+    int i;
+    if(len_remain<=0) //能够第二次接着发　保存第一次没发完的数据
     {
         if((len_remain=recv(conn_fd,recv_buf,sizeof(recv_buf),0))<0)
         {
@@ -27,13 +27,16 @@ int my_recv(int conn_fd,char *data_buf,int len)
             return 0;
         }
         phread=recv_buf;
-        for(i=0;*phread!='\n';i++)
-        {
-            if(i>len) return 0;
-            data_buf[i]=*phread++;
-            len_remain--;
-        }
     }
+    for(i=0;*phread!='\n';i++)      //防止一次发送没有发送完　所以设置为static 
+    {
+        if(i>len) return 0;
+        data_buf[i]=*phread;
+        phread++;
+        len_remain--;
+    }
+    len_remain--;    //回车结束符号
+    phread++;        //为了与上面进行对应
     return i;
 }
 

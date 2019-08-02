@@ -37,7 +37,7 @@ int find_name(char *name)
         perror("name is a invaild pointer!\n");
         return -2;
     }
-    for(int i=0;user[i].name[0]==' ';i++)
+    for(int i=0;user[i].name[0]!=' ';i++)
     {
         if(!strcmp(name,user[i].name))
         return i;
@@ -137,7 +137,7 @@ int main()
                     if(strcmp(user[name_num].password,recv_buf)==0)
                     {
                         send_data(conn_fd,"y\n");
-                        send_data(conn_fd,"welcome !\n");
+                        send_data(conn_fd,"welcome!\n");
                         printf("%s login!\n",user[name_num].name);
                         break;
                     }
