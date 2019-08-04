@@ -45,7 +45,7 @@ int find_name(char *name)
     return -1;
 }
 
-void send_data(int conn_fd,const char *string) //传入一个连接套接字和字符串数据
+void send_data(int conn_fd,const char *string) //传入一个连接套接字和字符串数据 
 {
     if(send(conn_fd,string,strlen(string),0)<0)
     {

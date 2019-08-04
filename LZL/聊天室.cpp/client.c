@@ -17,7 +17,7 @@ int my_recv(int conn_fd,char *data_buf,int len)
     static char *phread;
     static int len_remain = 0;
     int i;
-    if(len_remain<=0) //能够第二次接着发　保存第一次没发完的数据
+    if(len_remain<=0) //能够第二次接着发　保存第一次没发完的数据 
     {
         if((len_remain=recv(conn_fd,recv_buf,sizeof(recv_buf),0))<0)
         {
@@ -55,70 +55,57 @@ int get_userinfo(char *buf,int len)
     return 0;
 }
 
-void input_userinfo(int conn_fd,const char *string)//循环　直到接收到消息为“ｙ“
+int input_userinfo(recv_t *temp)
 {
-    char input_buf[MAX_USERNAME];
-    char recv_buf[BUFSIZ];
-    int flag_userinfo;
-    do{
-        printf("%s:",string);
-        if(get_userinfo(input_buf,32)<0)
-        {
-            perror("get_userinfo\n");
-            exit(1);
-        }
-        printf("%s\n",input_buf);
-        if(send(conn_fd,input_buf,MAX_USERNAME,0)<0)
-        {
-            perror("send\n");
-            exit(1);
-        }
-        printf("发送成功\n");
-        if(my_recv(conn_fd,recv_buf,strlen(recv_buf))<0)
-        {
-            perror("my_recv\n");
-            exit(1);
-        }
-        printf("接收到信息\n");
-        if(recv_buf[0]==VAILD)
-        flag_userinfo=VAILD;
-        else
-        {
-            printf("error! please enter again\n");
-            flag_userinfo=INVAILD;
-        }
-    }while(flag_userinfo==INVAILD);
+    int flag_userinfo=0;
+    char account[MAX_ACCOUNT];
+    char password[MAX_RECV];
+    printf("account:");
+    if(get_userinfo(account,MAX_ACCOUNT)<0)
+    {
+        perror("get_userinfo\n");
+        exit(1);
+    }
+    strcpy(temp->send_Account,account);
+    printf("password:");
+    if(get_userinfo(password,MAX_PASSWORD)<0)
+    {
+        perror("get_userinfo\n");
+        exit(1);
+    }
+    strcpy(temp->message,password);
 }
 
 int login_client(int conn_fd,char *username)
 {
-    char             buf[MAX_RECV];
     int              ret;
-    //先告诉服务器有一个登录请求 初始化请求要用的包
     recv_t           Package;
     Package.type   = LOGIN;
     Package.send_fd= conn_fd;
-    if(send(conn_fd,&Package,sizeof(recv_t),0)<0)//发送一个登录请求
+    int number=3;
+    while(number--)  //三次机会
     {
-        perror("error in send\n");
-        return 0;  //错误退出
-    }
-/*     if(Package.message[0]!=VAILD)
-    {
-        printf("登录请求错误！\n");
-        return 0;  //服务器未返回‘ｙ’
-    } */
-    //如果登录请求正确
-    input_userinfo(conn_fd,"username:");
-    input_userinfo(conn_fd,"password:");
-
-    if((ret=my_recv(conn_fd,username,MAX_USERNAME)<0))//希望登录成功后返回本身用户名
-    {
-        perror("my_recv\n");
-        exit(1);
+        input_userinfo(&Package);
+        printf("send    \n");
+        if(send(conn_fd,&Package,sizeof(recv_t),0)<0)//发送一个登录请求
+        {
+            perror("error in send\n");
+            return 0;  //错误退出
+        }
+        //如果登录请求正确
+        if((ret=my_recv(conn_fd,username,MAX_USERNAME))<0) //默认阻塞
+        {
+            perror("error in my_recv\n");
+            exit(1);
+        }
+        if(username[0]==ERROR_IN_LOGIN)
+        {
+            perror("account or password error!\n");
+            continue;
+        }else break;
+        printf("down to while\n");
     }
     printf("welcome to zhaolonga-chat\n");
-    //close(conn_fd);     //应该是不关闭的　现在先测试登录
     return 1;  //登陆成功　进入服务界面
 }
 
@@ -175,13 +162,12 @@ int main(int argc,char **argv)  //暂时无全局变量
 
     if(!login_client(conn_fd,username))  //希望指针返回一个用户名
     {
-        printf("密码或账号错误！\n");
-        return 0;
+        printf("please login again.\n");
+        exit(0);
     }else
     {      //登录成功后显示的页面
-	system("clear");
 	char choice;
-	do { 
+	 do { 
 		system("clear");
 		printf("\n\n====================================================================\n");
 		printf("\n========您好，[%s]先生/女士,欢迎来到zhaolonga-happychat=================\n",username);
@@ -201,7 +187,6 @@ int main(int argc,char **argv)  //暂时无全局变量
 		printf("      [E]退出登录\n");
 		printf("\n==================================================================\n");
 		printf("\n请输入您要进行的操作");
-		
 		choice = getchar();
 		switch (choice)
 		 {
@@ -244,7 +229,8 @@ int main(int argc,char **argv)  //暂时无全局变量
 			system("clear");
 			break;
 		}
-	} while ('E' != choice && 'e' != choice);
-    }
-    
+	} while ('E' != choice && 'e' != choice); 
+    } 
+    close(conn_fd);
+    return 0;
 }

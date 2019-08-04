@@ -7,11 +7,14 @@
 #include<arpa/inet.h>
 #include<sys/epoll.h>
 #include<errno.h> 
+#include<stdlib.h>
 #include<pthread.h>
-#include"solve.h"
+#include<signal.h>
+#include"solve.h" 
 
 int main()
 {
+    signal(SIGPIPE,SIG_IGN);   //ctrl+c stop 
     int sock_fd,conn_fd;
     int optval;
     int flag_recv=USERNAME;
@@ -40,7 +43,7 @@ int main()
     }
     memset(&serv_addr,0,sizeof(struct sockaddr_in));
 
-    serv_addr.sin_family=AF_INET;      //协议族 ipv4 tcp/ip
+    serv_addr.sin_family=AF_INET;      //协议族 ipv4 tcp/ip 
     serv_addr.sin_port=htons(SERV_POT);//服务器端口 
     serv_addr.sin_addr.s_addr=htonl(INADDR_ANY); //IP地址
     if(bind(sock_fd,(struct sockaddr*)&serv_addr,sizeof(struct sockaddr_in))<0)
@@ -48,7 +51,7 @@ int main()
         perror("bind\n");
         exit(1);
     }
-    if(listen(sock_fd,LISTENQ)<0) 
+    if(listen(sock_fd,LISTENQ)<0)
     {
         perror("listen\n");
         exit(1);
@@ -56,10 +59,10 @@ int main()
 /*     printf("accept up\n");
     conn_fd=accept(sock_fd,(struct sokcaddr*)&cli_addr,&cli_len);
     printf("%d::\n",sock_fd); */
-    epfd=epoll_create(EVENTS_MAX_SIZE);
+    epfd=epoll_create(1);
     ev.data.fd= sock_fd;
-    ev.events =EPOLLIN;     //设置为监听读的状态
-    //使用默认的LT模式
+    ev.events =EPOLLIN | EPOLLONESHOT;     //设置为监听读的状态
+    //使用默认的LT模式 // epoll  事件只触发一次
     epoll_ctl(epfd,EPOLL_CTL_ADD,sock_fd,&ev);
     connect_size++;
     for(;;)
@@ -67,7 +70,6 @@ int main()
         nfds = epoll_wait(epfd,events,EVENTS_MAX_SIZE,-1);//等待可写事件
         for(int i=0;i<nfds;i++)
         {
-            printf("jing ru epoll\n");
             connect_size++;
             if(events[i].data.fd==sock_fd)       //服务器套接字接收到一个连接请求
             {
@@ -77,7 +79,7 @@ int main()
                     continue;
                 }
 
-                conn_fd=accept(sock_fd,(struct sokcaddr*)&cli_addr,&cli_len);
+                conn_fd=accept(events[i].data.fd,(struct sokcaddr*)&cli_addr,&cli_len);
                 //网络字节序转换成字符串输出
                 printf("accept a new client ! ip:%s\n",inet_ntoa(cli_addr.sin_addr));
 
@@ -88,14 +90,27 @@ int main()
                     continue;
                 }
                 ev.data.fd= conn_fd;
-                ev.events =EPOLLIN;//|EPOLLOUT;  //设置事件可写与可写
+                ev.events =EPOLLIN | EPOLLONESHOT;//|EPOLLOUT;  //设置事件可写与可写
                 epoll_ctl(epfd,EPOLL_CTL_ADD,conn_fd,&ev); //新增服务器套接字
-
             }
-             else if(events[i].events & EPOLLIN )  //接收到可读
+            // else if(events[i].events != 1)
+            // {
+            //     printf("error in delete\n");
+            //     int t = epoll_ctl(epfd,EPOLL_CTL_DEL,events[i].data.fd,0);
+            //     printf("t = %d\n",t);
+            //     close(events[i].data.fd);
+            //     continue;
+            // }
+            else if(events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR))
             {
-                printf("接收到可读请求    ！\n");
-                if((ret=recv(sock_fd,&recv_buf,sizeof(recv_buf),0))<0)
+                epoll_ctl(epfd,EPOLL_CTL_DEL,events[i].data.fd,0);    
+                close(events[i].data.fd);
+                continue;
+            }
+            else if(events[i].events & EPOLLIN )  //接收到可读 且不是服务器套接字　不用判断　上面已判断
+            {
+                printf(" shi jian events :: %d\n",events[i].events);
+                if((ret=recv(events[i].data.fd,&recv_buf,sizeof(recv_buf),0))<0) //接收
                 //包的格式已经提前制定好
                 {
                     perror("recv\n");
@@ -103,8 +118,9 @@ int main()
                 }
                 recv_buf.send_fd = events[i].data.fd; //发送者的套接字已经改变 应转换为accept后的套接字
                // recv_buf.recv_fd = sock_fd;     //接收套接字
-                
-                pth1=pthread_create(&pth1,NULL,solve,&recv_buf);//开一个线程去判断任务类型从而执行
+                recv_t *temp=(recv_t*)malloc(sizeof(recv_t)); //防止多线程访问一个结构体
+                *temp=recv_buf;
+                pth1=pthread_create(&pth1,NULL,solve,temp);//开一个线程去判断任务类型从而执行 值传递
             }  
         }
     }
