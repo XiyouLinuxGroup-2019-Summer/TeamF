@@ -46,5 +46,9 @@ int *solve(void *arg)
             break;
     }
     printf("end of pthread!\n");
+    struct epoll_event ev;
+    ev.data.fd = recv_buf->conn_fd;
+    ev.events = EPOLLIN | EPOLLONESHOT;
+    epoll_ctl(recv_buf->epfd, EPOLL_CTL_MOD,recv_buf->conn_fd, &ev);
     free(recv_buf);
 }

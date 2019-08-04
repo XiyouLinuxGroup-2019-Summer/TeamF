@@ -29,6 +29,8 @@ typedef struct {
     int recv_fd;
     char recv_Acount[MAX_ACCOUNT];    //
     char message[MAX_RECV];
+    int epfd;
+    int conn_fd;
 }recv_t; //客户端第一次recv中包的格式
 
 typedef struct{

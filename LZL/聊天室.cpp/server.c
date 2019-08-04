@@ -61,7 +61,7 @@ int main()
     printf("%d::\n",sock_fd); */
     epfd=epoll_create(1);
     ev.data.fd= sock_fd;
-    ev.events =EPOLLIN | EPOLLONESHOT;     //设置为监听读的状态
+    ev.events =EPOLLIN ;     //设置为监听读的状态
     //使用默认的LT模式 // epoll  事件只触发一次
     epoll_ctl(epfd,EPOLL_CTL_ADD,sock_fd,&ev);
     connect_size++;
@@ -70,6 +70,7 @@ int main()
         nfds = epoll_wait(epfd,events,EVENTS_MAX_SIZE,-1);//等待可写事件
         for(int i=0;i<nfds;i++)
         {
+            printf(" shi jian events :: %d\n",events[i].events);
             connect_size++;
             if(events[i].data.fd==sock_fd)       //服务器套接字接收到一个连接请求
             {
@@ -109,7 +110,6 @@ int main()
             }
             else if(events[i].events & EPOLLIN )  //接收到可读 且不是服务器套接字　不用判断　上面已判断
             {
-                printf(" shi jian events :: %d\n",events[i].events);
                 if((ret=recv(events[i].data.fd,&recv_buf,sizeof(recv_buf),0))<0) //接收
                 //包的格式已经提前制定好
                 {
@@ -120,6 +120,8 @@ int main()
                // recv_buf.recv_fd = sock_fd;     //接收套接字
                 recv_t *temp=(recv_t*)malloc(sizeof(recv_t)); //防止多线程访问一个结构体
                 *temp=recv_buf;
+                temp->epfd=epfd;
+                temp->conn_fd=events[i].data.fd;
                 pth1=pthread_create(&pth1,NULL,solve,temp);//开一个线程去判断任务类型从而执行 值传递
             }  
         }
