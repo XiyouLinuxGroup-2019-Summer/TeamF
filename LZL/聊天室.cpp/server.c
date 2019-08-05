@@ -10,10 +10,16 @@
 #include<stdlib.h>
 #include<pthread.h>
 #include<signal.h>
+#include<mysql/mysql.h>
 #include"solve.h" 
 
 int main()
 {
+    MYSQL mysql;
+    mysql_init(&mysql);  //初始化一个句柄 
+    mysql_library_init(0,NULL,NULL);//初始化数据库
+    mysql_real_connect(&mysql,"127.0.0.1","root","lzl213260c","Login_Data",0,NULL,0);//连接数据库
+    mysql_set_character_set(&mysql,"utf8");//调整为中文字符
     signal(SIGPIPE,SIG_IGN);   //ctrl+c stop  
     int sock_fd,conn_fd;
     int optval;
@@ -56,9 +62,6 @@ int main()
         perror("listen\n");
         exit(1);
     }
-/*     printf("accept up\n");
-    conn_fd=accept(sock_fd,(struct sokcaddr*)&cli_addr,&cli_len);
-    printf("%d::\n",sock_fd); */
     epfd=epoll_create(1);
     ev.data.fd= sock_fd;
     ev.events =EPOLLIN ;     //设置为监听读的状态

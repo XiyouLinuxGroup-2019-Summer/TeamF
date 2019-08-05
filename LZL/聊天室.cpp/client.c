@@ -13,7 +13,7 @@
 
 int my_recv(int conn_fd,char *data_buf,int len)
 {
-    static char recv_buf[BUFSIZ];  //8192 
+    static char recv_buf[BUFSIZ];  //8192  
     static char *phread;
     static int len_remain = 0;
     int i;

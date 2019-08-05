@@ -13,7 +13,7 @@
 #define MAX_RECV           8096    //发包的大小 与接包大小相同
 
 #define ERROR_IN_LOGIN     '@'      //登录失败
-#define INVAILD            'n'      //用户信息无效
+#define INVAILD            'n'      //用户信息无效 
 #define VAILD              'y'      //用户信息有效
 #define USERNAME            0
 #define PASSWORD            1
