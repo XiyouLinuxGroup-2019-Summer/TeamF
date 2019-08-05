@@ -14,7 +14,7 @@
 
 int main()
 {
-    signal(SIGPIPE,SIG_IGN);   //ctrl+c stop 
+    signal(SIGPIPE,SIG_IGN);   //ctrl+c stop  
     int sock_fd,conn_fd;
     int optval;
     int flag_recv=USERNAME;

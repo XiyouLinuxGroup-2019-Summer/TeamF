@@ -7,7 +7,8 @@
 #define MAX_CONTECT_SIZE   1024   //服务器最大连接数
 #define MAX_USERNAME       64     //名称长度最大数
 #define MAX_ACCOUNT        32     //账号长度最大值
-#define MAX_PASSWORD       32
+#define MAX_PASSWORD       32     //密码最大长度
+#define MAX_TELEPHONE      32     //找回密码使用的电话最长长度
 
 #define MAX_RECV           8096    //发包的大小 与接包大小相同
 
@@ -30,13 +31,7 @@ typedef struct {
     int recv_fd;
     char recv_Acount[MAX_ACCOUNT];    //
     char message[MAX_RECV];
+    char message_tmp[MAX_RECV];//放两个缓冲区　以备不时之需
     int epfd;
     int conn_fd;
 }recv_t; //客户端第一次recv中包的格式
-
-typedef struct{
-    char username[64];
-    char password[64];
-    int recv_fd;
-    int send_fd;
-}login_t;  //登录时使用的包

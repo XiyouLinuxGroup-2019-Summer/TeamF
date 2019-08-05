@@ -13,7 +13,7 @@
 
 int my_recv(int conn_fd,char *data_buf,int len)
 {
-    static char recv_buf[BUFSIZ];  //8192
+    static char recv_buf[BUFSIZ];  //8192 
     static char *phread;
     static int len_remain = 0;
     int i;
@@ -119,12 +119,17 @@ int register_client(int conn_fd,char *account)  //注册请求　返回一个账
     Package.type   = REGISTER;
     Package.send_fd= conn_fd;
     char password[MAX_PASSWORD];
+    char telephone[MAX_TELEPHONE];
     system("clear");
     printf("Welcome to register account!\n");
     printf("please enter your password,we will give your a unique account.\n");
     printf("password:");
     getchar();
     get_userinfo(password,MAX_PASSWORD);
+    printf("Get it back for your password\n");
+    printf("telephone:");
+    get_userinfo(telephone,MAX_TELEPHONE);
+    strcpy(Package.message_tmp,telephone);
     strcpy(Package.message,password);
     if((ret=send(conn_fd,&Package,sizeof(recv_t),0))<0)
     {
