@@ -17,7 +17,7 @@ int my_recv(int conn_fd,char *data_buf,int len)
     static char *phread;
     static int len_remain = 0;
     int i;
-    if(len_remain<=0) //能够第二次接着发　保存第一次没发完的数据 
+    if(len_remain<=0) //能够第二次接着发　保存第一次没发完的数据  
     {
         if((len_remain=recv(conn_fd,recv_buf,sizeof(recv_buf),0))<0)
         {
@@ -60,6 +60,7 @@ int input_userinfo(recv_t *temp)
     int flag_userinfo=0;
     char account[MAX_ACCOUNT];
     char password[MAX_RECV];
+    fflush(stdin);
     printf("account:");
     if(get_userinfo(account,MAX_ACCOUNT)<0)
     {
@@ -83,6 +84,8 @@ int login_client(int conn_fd,char *username)
     Package.type   = LOGIN;
     Package.send_fd= conn_fd;
     int number=3;
+    getchar();
+    system("clear");
     while(number--)  //三次机会
     {
         input_userinfo(&Package);
@@ -109,9 +112,45 @@ int login_client(int conn_fd,char *username)
     return 1;  //登陆成功　进入服务界面
 }
 
+int register_client(int conn_fd,char *account)  //注册请求　返回一个账号
+{
+    int ret;
+    recv_t           Package;
+    Package.type   = REGISTER;
+    Package.send_fd= conn_fd;
+    char password[MAX_PASSWORD];
+    system("clear");
+    printf("Welcome to register account!\n");
+    printf("please enter your password,we will give your a unique account.\n");
+    printf("password:");
+    getchar();
+    get_userinfo(password,MAX_PASSWORD);
+    strcpy(Package.message,password);
+    if((ret=send(conn_fd,&Package,sizeof(recv_t),0))<0)
+    {
+        perror("error in register send\n");
+        return 0;
+    }
+    if((ret=my_recv(conn_fd,account,MAX_ACCOUNT))<0)
+    {
+        perror("error in register send\n");
+        return 0;
+    }
+    if(account[0]==ERROR_IN_LOGIN)
+    {
+        perror("error in server data\n");
+        return 0;
+    }
+    printf("This is your Account ,Don't forget it!\n");
+    printf("Account:%s\nPlease enter again!\n",account);
+    printf("please enter enter key for quit!\n");
+    getchar();
+    return 1;   //发送正确且收到账号消息返回１
+}
+
 int main(int argc,char **argv)  //暂时无全局变量
 {
-    //setbuf(stdin,NULL);
+    setbuf(stdin,NULL);
     int i;
     int ret;
     int conn_fd;
@@ -121,6 +160,7 @@ int main(int argc,char **argv)  //暂时无全局变量
     int Port=SERV_POT;    //宏中自定义的端口号　后面还要改
     char client_IP[32]="127.0.0.1";//ＩＰ地址
     char username[MAX_USERNAME];
+    char register_tmp[MAX_ACCOUNT];
     recv_t Package;//登录请求时要发的包
     memset(&serv_addr,0,sizeof(struct sockaddr_in));
     serv_addr.sin_family=AF_INET; //ipv4 tcp
@@ -159,12 +199,37 @@ int main(int argc,char **argv)  //暂时无全局变量
     }
 
     printf("连接请求已运行\n");
-
-    if(!login_client(conn_fd,username))  //希望指针返回一个用户名
-    {
-        printf("please login again.\n");
-        exit(0);
-    }else
+    char ch;
+    int flag=0;
+    int ans=0;
+    do{
+        if(ans==1) break;
+        ans=0;
+        system("clear");
+        printf("Register[R]          Enter[E]\n");
+        printf("Quit    [Q]\n");
+        scanf("%c",&ch);
+        switch (ch)
+        {
+            case 'R':
+            case 'r':
+                register_client(conn_fd,register_tmp);
+                break;
+            case 'E':
+            case 'e':
+                if(!login_client(conn_fd,username))  //希望指针返回一个用户名
+                {
+                    printf("please login again.\n");
+                    flag=1;
+                }else ans=1;   //登录成功
+                break;
+            case 'Q':
+            case 'q':
+            default:
+                break;
+        }
+    }while(ch !='q' && ch!='Q');
+    if(!flag)
     {      //登录成功后显示的页面
 	char choice;
 	 do { 

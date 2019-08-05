@@ -94,21 +94,15 @@ int main()
                 ev.events =EPOLLIN | EPOLLONESHOT;//|EPOLLOUT;  //设置事件可写与可写
                 epoll_ctl(epfd,EPOLL_CTL_ADD,conn_fd,&ev); //新增服务器套接字
             }
-            // else if(events[i].events != 1)
-            // {
-            //     printf("error in delete\n");
-            //     int t = epoll_ctl(epfd,EPOLL_CTL_DEL,events[i].data.fd,0);
-            //     printf("t = %d\n",t);
-            //     close(events[i].data.fd);
-            //     continue;
-            // }
             else if(events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR))
             {
+                //客户端被挂掉　值设置为24 不把事件类型设置为SO_REUSEADDR　会发送很多可读事件
+                //不清楚为什么　有点烦
                 epoll_ctl(epfd,EPOLL_CTL_DEL,events[i].data.fd,0);    
                 close(events[i].data.fd);
                 continue;
             }
-            else if(events[i].events & EPOLLIN )  //接收到可读 且不是服务器套接字　不用判断　上面已判断
+            else if(events[i].events & EPOLLIN )  //接收到可读 且不是服务器套接字　不用判断　上面已判断 
             {
                 if((ret=recv(events[i].data.fd,&recv_buf,sizeof(recv_buf),0))<0) //接收
                 //包的格式已经提前制定好

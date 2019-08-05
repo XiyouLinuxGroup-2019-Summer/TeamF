@@ -11,7 +11,7 @@
 #include<stdio.h>
 #include"Data.h"
 
-void send_data(int conn_fd,const char *string) //传入一个连接套接字和字符串数据 
+void send_data(int conn_fd,const char *string) //传入一个连接套接字和字符串数据  
 {
     if(send(conn_fd,string,strlen(string),0)<0)
     {
@@ -31,15 +31,27 @@ int login(recv_t *sock,const char *string)  //sock_fd是要被发送数据的套
     send_data(sock->send_fd,"@@@"); //错误的请求
 }
 
+int register_server(recv_t * sock)
+{
+    char account[MAX_ACCOUNT]="111111";
+    if(1) //如果存在合法的未使用账号
+    send_data(sock->send_fd,account);
+    else 
+    send_data(sock->send_fd,"@@@");  //错误的请求
+}
+
 int *solve(void *arg)
 {
     recv_t *recv_buf=(recv_t *)arg;
-    char recv_flag=recv_buf->type;
+    int recv_flag=recv_buf->type;
     switch (recv_flag)
     {
         case LOGIN :
 
             login(recv_buf,"have a people login!");
+            break;
+        case REGISTER :
+            register_server(recv_buf);
             break;
         default:
             printf("error\n");

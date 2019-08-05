@@ -17,13 +17,14 @@
 #define USERNAME            0
 #define PASSWORD            1
 /*-----------------------------------------------*/
-#define LOGIN               '0'       //登录请求
+#define LOGIN               0       //登录请求
+#define REGISTER            1       //注册请求
 
 
 /*-----------------------------------------------*/
 
 typedef struct {
-    char type;   //事件类型
+    int  type;   //事件类型
     int send_fd;
     char send_Account[MAX_ACCOUNT];  //账号　用账号来区分不同的人
     int recv_fd;
