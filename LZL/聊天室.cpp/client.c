@@ -50,7 +50,6 @@ int get_userinfo(char *buf,int len)
     {
         buf[i++]=c;
     }
-    buf[i++]='\n';
     buf[i++]='\0';
     return 0;
 }
@@ -120,7 +119,10 @@ int register_client(int conn_fd,char *account)  //注册请求　返回一个账
     Package.send_fd= conn_fd;
     char password[MAX_PASSWORD];
     char telephone[MAX_TELEPHONE];
-    system("clear");
+    char nickname[MAX_USERNAME];
+    //system("clear");
+
+    //收集注册信息
     printf("Welcome to register account!\n");
     printf("please enter your password,we will give your a unique account.\n");
     printf("password:");
@@ -129,8 +131,12 @@ int register_client(int conn_fd,char *account)  //注册请求　返回一个账
     printf("Get it back for your password\n");
     printf("telephone:");
     get_userinfo(telephone,MAX_TELEPHONE);
+    printf("please enter you nickname!\n");
+    get_userinfo(nickname,MAX_USERNAME);
+    strcpy(Package.recv_Acount,nickname);   //缓冲区不够了　这个用一下
     strcpy(Package.message_tmp,telephone);
     strcpy(Package.message,password);
+
     if((ret=send(conn_fd,&Package,sizeof(recv_t),0))<0)
     {
         perror("error in register send\n");

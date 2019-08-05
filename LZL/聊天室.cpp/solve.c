@@ -35,7 +35,7 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     if(!strcpy(sock->message,row[1]))//在数据库中检测账号密码是否匹配 返回名称　密码在message中
     {
         send_data(sock->send_fd,row[3]);//发送名称
-        sprintf(buf,"udpate Login_Data status name = \"1\" where send_recv_fd = %d",sock->send_fd);
+        sprintf(buf,"update Login_Data set status = \"1\" where send_recv_fd = \"%d\"",sock->send_fd);
         mysql_query(mysql,buf); //改变登录状态
     }
     else 
@@ -57,7 +57,9 @@ int register_server(recv_t * sock,MYSQL *mysql)
     sprintf(buf,"update Account set Account = \"%s\" where Account = \"%s\"",account,row[0]);
     mysql_query(mysql,buf);
     send_data(sock->send_fd,account);//注册时返回一个账号                                       //存一次昵称
-    //sprintf(buf,"insert into Login_Data values(%s,)",account,sock->message,sock->message_tmp,sock->recv_Acount,0,sock->send_fd);
+    sprintf(buf,"insert into Data values('%s','%s','%s','%s',0,%d)",account,sock->message,sock->message_tmp,sock->recv_Acount,sock->send_fd);
+    printf("%s\n",buf);
+    mysql_query(mysql,buf);
 }
 
 int *solve(void *arg)
