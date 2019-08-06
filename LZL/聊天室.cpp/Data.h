@@ -17,13 +17,17 @@
 #define VAILD              'y'      //用户信息有效
 #define USERNAME            0
 #define PASSWORD            1
+#define BOX_NO_MESSAGES    "@@@@@@@@@@@@@"
+#define BOX_HAVE_MESSAGS   "$$$$$$$$$$$$$"
 /*-----------------------------------------------*/
+#define EOF_OF_BOX          -1
 #define LOGIN               0       //登录请求
 #define REGISTER            1       //注册请求
 #define RETRIEVE            2       //找回密码
 #define ADD_FRIENDS         3       //添加好友
-#define DEL_FRIENDS         4       //删除好友
-#define LIST_FRIENDS        5       //显示好友列表
+#define ADD_FRIENDS_QUERY   4       //收到添加好友请求后做出答复的数据类型
+#define DEL_FRIENDS         5       //删除好友
+#define LIST_FRIENDS        6       //显示好友列表
 
 
 /*-----------------------------------------------*/
@@ -39,3 +43,10 @@ typedef struct {
     int epfd;
     int conn_fd;
 }recv_t; //客户端第一次recv中包的格式
+
+typedef struct 
+{
+    char account[MAX_ACCOUNT];
+    char message[MAX_RECV];
+    int type;    //事件类型
+}Box_t;

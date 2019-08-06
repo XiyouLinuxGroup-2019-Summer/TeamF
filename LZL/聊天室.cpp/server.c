@@ -18,7 +18,7 @@ int main()
     MYSQL mysql;
     mysql_init(&mysql);  //初始化一个句柄 
     mysql_library_init(0,NULL,NULL);//初始化数据库
-    mysql_real_connect(&mysql,"127.0.0.1","root","lzl213260c","Login_Data",0,NULL,0);//连接数据库
+    mysql_real_connect(&mysql,"127.0.0.1","root","lzl213260C","Login_Data",0,NULL,0);//连接数据库
     mysql_set_character_set(&mysql,"utf8");//调整为中文字符
     signal(SIGPIPE,SIG_IGN);   //ctrl+c stop  
     int sock_fd,conn_fd;
@@ -47,6 +47,7 @@ int main()
         perror("setsocket\n");
         exit(1);
     }
+    setsockopt(sock_fd,SOL_SOCKET,SO_KEEPALIVE,(void*)&optval,sizeof(int));
     memset(&serv_addr,0,sizeof(struct sockaddr_in));
 
     serv_addr.sin_family=AF_INET;      //协议族 ipv4 tcp/ip 
@@ -64,7 +65,7 @@ int main()
     }
     epfd=epoll_create(1);
     ev.data.fd= sock_fd;
-    ev.events =EPOLLIN ;     //设置为监听读的状态
+    ev.events =EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLRDHUP ;     //设置为监听读的状态
     //使用默认的LT模式 // epoll  事件只触发一次
     epoll_ctl(epfd,EPOLL_CTL_ADD,sock_fd,&ev);
     connect_size++;
@@ -73,7 +74,7 @@ int main()
         nfds = epoll_wait(epfd,events,EVENTS_MAX_SIZE,-1);//等待可写事件
         for(int i=0;i<nfds;i++)
         {
-            printf(" shi jian events :: %d\n",events[i].events);
+            printf(" The event type is %d\n",events[i].events);
             connect_size++;
             if(events[i].data.fd==sock_fd)       //服务器套接字接收到一个连接请求
             {
@@ -94,7 +95,7 @@ int main()
                     continue;
                 }
                 ev.data.fd= conn_fd;
-                ev.events =EPOLLIN | EPOLLONESHOT;//|EPOLLOUT;  //设置事件可写与可写
+                ev.events =EPOLLIN | EPOLLONESHOT | EPOLLRDHUP;//|EPOLLOUT;  //设置事件可写与可写
                 epoll_ctl(epfd,EPOLL_CTL_ADD,conn_fd,&ev); //新增服务器套接字
             }
             else if(events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR))
@@ -103,7 +104,6 @@ int main()
                 //不清楚为什么　有点烦
                 epoll_ctl(epfd,EPOLL_CTL_DEL,events[i].data.fd,0);    
                 close(events[i].data.fd);
-                continue;
             }
             else if(events[i].events & EPOLLIN )  //接收到可读 且不是服务器套接字　不用判断　上面已判断 
             {
@@ -113,8 +113,21 @@ int main()
                     perror("recv\n");
                     continue;
                 }
+                if(!ret)//防止客户端异常退出时无法改变状态 客户端异常时会先发送一个大小为零的包
+                {       //对端关闭会发送一个可读事件　但包的大小为一
+                    //这个处理限定了一个ＩＰ只能登录一个账号
+                    char buf[128];
+                    printf("The client with IP %d is disconnected\n",events[i].data.fd);
+                    sprintf(buf,"select *from Data where send_recv_fd = %d",events[i].data.fd);
+                    mysql_query(&mysql,buf);
+                    MYSQL_RES *result = mysql_store_result(&mysql);
+                    MYSQL_ROW row=mysql_fetch_row(result);
+                    sprintf(buf,"update Data set status = \"0\" where send_recv_fd = \"%d\"",events[i].data.fd);
+                    mysql_query(&mysql,buf);
+                    mysql_free_result(result);
+                    continue;  
+                }
                 recv_buf.send_fd = events[i].data.fd; //发送者的套接字已经改变 应转换为accept后的套接字
-               // recv_buf.recv_fd = sock_fd;     //接收套接字
                 recv_t *temp=(recv_t*)malloc(sizeof(recv_t)); //防止多线程访问一个结构体
                 *temp=recv_buf;
                 temp->epfd=epfd;
