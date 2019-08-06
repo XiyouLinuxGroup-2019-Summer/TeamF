@@ -88,7 +88,6 @@ int login_client(int conn_fd,char *username)
     while(number--)  //三次机会
     {
         input_userinfo(&Package);
-        printf("send    \n");
         if(send(conn_fd,&Package,sizeof(recv_t),0)<0)//发送一个登录请求
         {
             perror("error in send\n");
@@ -100,14 +99,15 @@ int login_client(int conn_fd,char *username)
             perror("error in my_recv\n");
             exit(1);
         }
+        //printf("%s::\n",username);
         if(username[0]==ERROR_IN_LOGIN)
         {
             perror("account or password error!\n");
             continue;
         }else break;
-        printf("down to while\n");
     }
-    printf("welcome to zhaolonga-chat\n");
+    if(number==-1) return 0;
+    //printf("welcome to zhaolonga-chat\n");
     return 1;  //登陆成功　进入服务界面
 }
 
@@ -212,10 +212,10 @@ int main(int argc,char **argv)  //暂时无全局变量
     printf("连接请求已运行\n");
     char ch;
     int flag=0;
-    int ans=0;
+    int ans=3;
     do{
         if(ans==1) break;
-        ans=0;
+        ans--;
         system("clear");
         printf("Register[R]          Enter[E]\n");
         printf("Quit    [Q]\n");
@@ -232,13 +232,15 @@ int main(int argc,char **argv)  //暂时无全局变量
                 {
                     printf("please login again.\n");
                     flag=1;
-                }else ans=1;   //登录成功
+                }else ans=1;
                 break;
             case 'Q':
             case 'q':
             default:
                 break;
         }
+        if(flag) break;
+        if(ans)  break;
     }while(ch !='q' && ch!='Q');
     if(!flag)
     {      //登录成功后显示的页面

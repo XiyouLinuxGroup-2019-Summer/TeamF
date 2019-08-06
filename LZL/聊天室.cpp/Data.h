@@ -20,6 +20,10 @@
 /*-----------------------------------------------*/
 #define LOGIN               0       //登录请求
 #define REGISTER            1       //注册请求
+#define RETRIEVE            2       //找回密码
+#define ADD_FRIENDS         3       //添加好友
+#define DEL_FRIENDS         4       //删除好友
+#define LIST_FRIENDS        5       //显示好友列表
 
 
 /*-----------------------------------------------*/

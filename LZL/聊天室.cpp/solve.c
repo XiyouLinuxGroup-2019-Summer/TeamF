@@ -27,15 +27,16 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     char recv_buf[MAX_USERNAME];//登录时默认使用字符串
     int flag_recv=USERNAME;
     char buf[256];
-    sprintf(buf,"select *from Login_Data where send_recv_fd = %d",sock->send_fd);
+    sprintf(buf,"select *from Data where Account = %s",sock->send_Account);
     mysql_query(mysql,buf);
     MYSQL_RES *result = mysql_store_result(mysql);
     MYSQL_ROW row;
     row=mysql_fetch_row(result);
-    if(!strcpy(sock->message,row[1]))//在数据库中检测账号密码是否匹配 返回名称　密码在message中
+    printf("%s || %s\n",sock->message,row[1]);
+    if(!strcmp(sock->message,row[1]))//在数据库中检测账号密码是否匹配 返回名称　密码在message中
     {
         send_data(sock->send_fd,row[3]);//发送名称
-        sprintf(buf,"update Login_Data set status = \"1\" where send_recv_fd = \"%d\"",sock->send_fd);
+        sprintf(buf,"update Data set status = \"1\" where Account = \"%s\"",sock->send_Account);
         mysql_query(mysql,buf); //改变登录状态
     }
     else 
@@ -60,6 +61,7 @@ int register_server(recv_t * sock,MYSQL *mysql)
     sprintf(buf,"insert into Data values('%s','%s','%s','%s',0,%d)",account,sock->message,sock->message_tmp,sock->recv_Acount,sock->send_fd);
     printf("%s\n",buf);
     mysql_query(mysql,buf);
+    mysql_free_result(result);
 }
 
 int *solve(void *arg)
