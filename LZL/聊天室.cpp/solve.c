@@ -146,7 +146,6 @@ int add_friend_server(recv_t *sock,MYSQL *mysql)
     int ret;
     char recv_buf[MAX_USERNAME];
     char buf[256];
-    char buffer[64];
     sprintf(buf,"select *from Data where Account = %s",sock->recv_Acount);
     mysql_query(mysql,buf);
     MYSQL_RES *result = mysql_store_result(mysql);
@@ -155,7 +154,6 @@ int add_friend_server(recv_t *sock,MYSQL *mysql)
     if(atoi(row[4])==1)  //在线
     {
         printf("11\n");
-        strcpy(buffer,"@@@@@");
         if(send(tmp,sock,sizeof(recv_t),0)<0)  //根据账号查找到接收者的套接字
         perror("error in send\n");//需要在线消息盒子　否则无法实现
     }else  //不在线把数据放到消息盒子
@@ -164,22 +162,93 @@ int add_friend_server(recv_t *sock,MYSQL *mysql)
         sprintf(buf,"insert into messages_box values('%d','%s','%s','%s')",tmp,sock->send_Account,sock->recv_Acount,sock->message);
         printf("%s\n",buf);
         mysql_query(mysql,buf);
-        strcpy(buffer,"yyy");
     }
-    if(send(sock->send_fd,buffer,64,0)<0)
-    perror("error in send\n");
+    //成功后不发送消息
 }
 
 int add_friend_server_already_agree(recv_t *sock,MYSQL *mysql)//向朋友数据库加入消息
 {
     //friend数据表中第三项　是为了在删除时仅删除一项就把一对好友关系进行删除　
     //这个函数只需要操作下数据库就好
-    char buf[512];
+    char buf[256];
     char unique_for_del[64];
     Delete_for_friend_third(sock->recv_Acount,sock->send_Account,unique_for_del);
     unique_for_del[strlen(sock->recv_Acount)+strlen(sock->send_Account)+1]='\0';
     sprintf(buf,"insert into friend values('%s','%s','%s')",sock->recv_Acount,sock->send_Account,unique_for_del);
     mysql_query(mysql,buf);
+    return 1;
+}
+
+int del_friend_server(recv_t *sock,MYSQL *mysql)
+{
+    char buf[256];
+    char unique_for_del[64];
+    Delete_for_friend_third(sock->recv_Acount,sock->send_Account,unique_for_del);
+    unique_for_del[strlen(sock->recv_Acount)+strlen(sock->send_Account)+1]='\0';
+    sprintf("delete from friend where del = '%s'",unique_for_del);
+    mysql_query(mysql,buf);
+    return 1;
+}
+
+int List_friends_server(recv_t *sock,MYSQL *mysql) //因为数据库表建的不好　导致查找效率较低
+{
+    recv_t packet;
+    packet.type=LIST_FRIENDS;    //区别与EOF包的差别
+    char send_account[MAX_ACCOUNT];  //请求好友列表者　
+    strcpy(send_account,sock->send_Account);
+    char buf[256];
+    sprintf(buf,"select *from friend where account1 = '%s'",sock->send_Account);
+    mysql_query(mysql,buf);
+    MYSQL_RES *result = mysql_store_result(mysql);
+    MYSQL_RES *res=NULL;
+    int number=mysql_num_rows(result);
+    MYSQL_ROW row,wor;
+    while(number--)//第一遍搜索的好友总数
+    {
+        row=mysql_fetch_row(result);
+
+        sprintf(buf,"select *from Data where Account = '%s'",row[1]);//每一个好友的信息
+        mysql_query(mysql,buf);
+        res=mysql_store_result(mysql);
+        wor=mysql_fetch_row(res);
+        strcpy(packet.message,wor[3]);//昵称
+        strcpy(packet.message_tmp,row[1]);//好友账号
+        packet.conn_fd=atoi(wor[4]);//是否在线
+        packet.send_fd=atoi(wor[5]);//好友套接字
+        if((send(sock->send_fd,&packet,sizeof(recv_t),0))<0)
+        perror("error in list_friend send\n");
+    }
+    mysql_free_result(result);
+    mysql_free_result(res);  //释放一遍空间
+    //开始第二遍搜索　数据库表建的不好　不然可以一遍ok的
+
+
+    sprintf(buf,"select *from friend where account2 = '%s'",sock->send_Account);
+    mysql_query(mysql,buf);
+    result = mysql_store_result(mysql);
+    res=NULL;
+    number=mysql_num_rows(result);
+    while(number--)//第二遍搜索的好友总数
+    {
+        row=mysql_fetch_row(result);
+
+        sprintf(buf,"select *from Data where Account = '%s'",row[0]);//每一个好友的信息
+        mysql_query(mysql,buf);
+        res=mysql_store_result(mysql);
+        wor=mysql_fetch_row(res);
+        strcpy(packet.message,wor[3]);//昵称
+        strcpy(packet.message_tmp,row[1]);//好友账号
+        packet.conn_fd=atoi(wor[4]);//是否在线
+        packet.send_fd=atoi(wor[5]);//好友套接字
+        if((send(sock->send_fd,&packet,sizeof(recv_t),0))<0)
+        perror("error in list_friend send\n");
+    }
+    packet.type=EOF_OF_BOX;//好友消息的结束包
+    if((send(sock->send_fd,&packet,sizeof(recv_t),0))<0)
+    perror("error in EOF list_friend\n");
+    mysql_free_result(result);
+    mysql_free_result(res);
+    return 1;
 }
 
 int *solve(void *arg)
@@ -207,6 +276,12 @@ int *solve(void *arg)
             break;
         case ADD_FRIENDS_QUERY:
             add_friend_server_already_agree(recv_buf,&mysql);
+            break;
+        case DEL_FRIENDS:
+            del_friend_server(recv_buf,&mysql);
+            break;
+        case LIST_FRIENDS:
+            List_friends_server(recv_buf,&mysql);
             break;
         default:
             printf("error\n");

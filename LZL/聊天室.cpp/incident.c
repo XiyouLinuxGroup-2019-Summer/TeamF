@@ -10,6 +10,17 @@
 #include<stdio.h>
 #include"Data.h"
 char gl_account[MAX_ACCOUNT]; //以一个全局变量记录账号
+int  fact_fd;
+
+void *method_client(void *arg)
+{
+    recv_t buf;
+    while(1)
+    {
+        if(recv(fact_fd,&buf,sizeof(recv_t),0)<0)
+        perror("error in recv\n");
+    }
+}
 
 int my_recv(int conn_fd,char *data_buf,int len)
 {
@@ -77,6 +88,7 @@ int input_userinfo(recv_t *temp)
 
 int login_client(int conn_fd,char *username)
 {
+    fact_fd=conn_fd; //给全局变量赋值
     int              ret;
     recv_t           Package;
     Package.type   = LOGIN;
@@ -256,20 +268,35 @@ int Add_Friend(int conn_fd)
         perror("error in add friend send\n");
         return 0;
     }
-    if((ret=my_recv(conn_fd,temp,64))<0)
+    printf("The message has been sent,please wait for it to be accepted\n");
+    getchar();
+    return 1;
+}
+
+int Del_Friend(int conn_fd)
+{
+    int              ret=0;
+    recv_t           Package;
+    Package.type   = ADD_FRIENDS;
+    Package.send_fd= conn_fd;
+    char Account[MAX_ACCOUNT];
+    char message[MAX_RECV];   //添加好友时给对方发送的话
+    char temp[64];   //就是一个接收消息的缓冲区
+    system("clear");
+    getchar();
+    printf("Please enter a Account you want to delete:");
+    get_userinfo(Account,MAX_ACCOUNT);
+    printf("Do you sure delete %s?[Y]yes / [N]no\n",Account);
+    scanf("%s",temp);
+    if(!(temp[0]=='Y'||temp[0]=='y'?1:0)) return 0;
+    strcpy(Package.recv_Acount,Account);
+    strcpy(Package.send_Account,gl_account);  //全局变量　代表本身的账号
+    if((ret=send(conn_fd,&Package,sizeof(recv_t),0))<0)
     {
-        perror("error in retrieve send\n");
+        perror("error in del friend send\n");
         return 0;
     }
-    if(temp[0]=='@')  //正确的话发送一个"y“
-    {
-        printf("Password change failed\n");
-        getchar();
-        return 0;
-    }else
-    {
-        printf("The message has been sent,please wait for it to be accepted\n");
-        getchar();
-    }
+    printf("%s have been delete!\n"); //没检测是否存在
+    getchar();
     return 1;
 }

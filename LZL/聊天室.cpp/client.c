@@ -46,14 +46,15 @@ int main(int argc,char **argv)  //暂时无全局变量
     }
     if(connect(conn_fd,(struct sockaddr*)&serv_addr,sizeof(struct sockaddr))<0)
     {
-        perror("目前用户数量太多！\n");//当用户数量太多时不连接
+        perror("目前用户数量太多！\n");//当用户数量太多时不连接　超过1024
         exit(1);
     }
 
     printf("连接请求已运行\n");
     char ch;
     int flag=0;
-    int ans=0;
+    int ans=0;      //巧妙的地方在于在登录时做了消息离线处理　登录一完成即显示离线消息　数据库实现
+                    //所以后面主功能块可以开一个线程专门收消息　与前面并不冲突
     do{
         system("clear");
         printf("Register      [R]     Enter   [E]\n");
@@ -85,8 +86,10 @@ int main(int argc,char **argv)  //暂时无全局变量
         if(flag) break;
         if(ans)  break;
     }while(ch !='q' && ch!='Q');
+    pthread_t pth1;
     if(!flag)
     {      //登录成功后显示的页面
+    pthread_create(&pth1,NULL,method_client,NULL); //开一个线程专门收包
 	char choice;
 	 do { 
 		system("clear");
@@ -115,9 +118,9 @@ int main(int argc,char **argv)  //暂时无全局变量
 		case 'a':
             Add_Friend(conn_fd);
 			break;
-         case 'P': 
-		 case 'p':
-		 	system("clear");
+         case 'd': 
+		 case 'D':
+		 	Del_Friend(conn_fd);
 			 break; 
 		case 'F':
 		case 'f':
