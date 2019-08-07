@@ -6,6 +6,7 @@
 
 #define IP                 (127.0.0.1)       //本地ip
 
+#define FRIEND_PAGE_SIZE   5      //好友列表分页最大数
 #define EVENTS_MAX_SIZE    1024   //epoll接收事件最大数 
 #define MAX_CONTECT_SIZE   1024   //服务器最大连接数
 #define MAX_USERNAME       64     //名称长度最大数
@@ -23,7 +24,7 @@
 #define BOX_NO_MESSAGES    "@@@@@@@@@@@@@"
 #define BOX_HAVE_MESSAGS   "$$$$$$$$$$$$$"
 /*-----------------------------------------------*/
-#define EOF_OF_BOX          -1
+#define EOF_OF_BOX          -1      //发包结束符
 #define LOGIN               0       //登录请求
 #define REGISTER            1       //注册请求
 #define RETRIEVE            2       //找回密码
@@ -54,14 +55,18 @@ typedef struct
     int type;    //事件类型
 }Box_t;
 
-typedef struct //好友链表类型
+
+
+typedef struct friend_node//好友链表类型
 {
     int status;//是否在线
     char nickname[MAX_USERNAME];//昵称
     char recv_account[MAX_ACCOUNT];//朋友账号　接收者
     char send_account[MAX_ACCOUNT];//本人账号　发送者
+    struct friend_node *next;
+    struct friend_node *prev;
     //不需要加套接字　在服务器会进行查询
-}list_friend_t,*node_friend_t;
+}node_friend_t,*list_friend_t;
 
 
 //包含分页器与链表操作

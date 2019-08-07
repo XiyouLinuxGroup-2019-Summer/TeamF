@@ -11,6 +11,7 @@
 #include"Data.h"
 char gl_account[MAX_ACCOUNT]; //以一个全局变量记录账号
 int  fact_fd;
+list_friend_t head;//存储一次登录的好友信息
 
 void *method_client(void *arg)
 {
@@ -119,37 +120,49 @@ int login_client(int conn_fd,char *username)
         }else break;
     }
     if(number==-1) return 0;
-
     //登录成功以后开始接收离线消息盒子里的消息
     my_recv(conn_fd,buf,MAX_RECV);
     if(!strcmp(buf,BOX_NO_MESSAGES))
-    return 1;//登陆成功 离线消息盒子无记录　进入服务界面
-    Box_t box;
-    char buffer[32];
-    while(1)
+    printf("消息盒子无记录！\n");//登陆成功 离线消息盒子无记录　进入服务界面
+    else
     {
-        if(recv(conn_fd,&box,sizeof(box),0)<0)
-        perror("error in recv\n");
-        if(box.type==EOF_OF_BOX)
-        break;
-        printf("%s:\n%s\n",box.account,box.message); //显示离线发送来的信息
-        if(box.type==ADD_FRIENDS)
+        Box_t box;
+        char buffer[32];
+        printf("进行到循环\n");
+        while(1)
         {
-            printf("YES   [Y]    NO    [N]\n");
-            scanf("%s",buffer);
-            getchar();
-            Package.type=ADD_FRIENDS_QUERY;
-            strcpy(Package.message,buffer);
+            if(recv(conn_fd,&box,sizeof(box),0)<0)
+            perror("error in recv\n");
+            if(box.type==EOF_OF_BOX)
+            {
+                printf("%s %d %s \n",box.message,box.type,box.account);
+                break;
+            }
+            printf("%s:\n%s\n",box.account,box.message); //显示离线发送来的信息
+            if(box.type==ADD_FRIENDS)
+            {
+                printf("YES   [Y]    NO    [N]\n");
+                scanf("%s",buffer);
+                getchar();
+                Package.type=ADD_FRIENDS_QUERY;
+                strcpy(Package.message,buffer);
 
-            //有发送者和接收者就可以确定好友关系　加入数据库
-            strcpy(Package.recv_Acount,box.account);//发送者
-            strcpy(Package.send_Account,gl_account);//接收者　//一种新的事件　epoll来判断
-            if(send(conn_fd,&Package,sizeof(recv_t),0)<0)
-            perror("error in send friend request\n"); //根据首字母判断
+                //有发送者和接收者就可以确定好友关系　加入数据库
+                strcpy(Package.recv_Acount,box.account);//发送者
+                strcpy(Package.send_Account,gl_account);//接收者　//一种新的事件　epoll来判断
+                if(send(conn_fd,&Package,sizeof(recv_t),0)<0)
+                perror("error in send friend request\n"); //根据首字母判断
+            }
         }
     }
-
-
+    //下面这行代码是当时调错用的　错误原因为服务器逻辑出现问题
+    
+    //Box_t box;
+    //recv(conn_fd,&box,sizeof(box),0);   //处理多接收了一个包
+    //printf("%s %d %s \n",box.message,box.type,box.account);
+    //接收完离线消息盒子记录开始接收好友信息列表
+    //实现为直接开始收包　最后一个结束包其中无数据　标记位为EOF
+    FetchAll_for_Friend_List();
     return 1;  //登陆成功　进入服务界面
 }
 
@@ -299,4 +312,93 @@ int Del_Friend(int conn_fd)
     printf("%s have been delete!\n"); //没检测是否存在
     getchar();
     return 1;
+}
+
+int show_friend_list()//套接字为全局变量
+{
+    Pagination_t paging;
+    node_friend_t *pos;
+    int i;
+    char choice;
+    list_friend_t curos;
+    paging.totalRecords=0;
+    List_ForEach(head,curos) paging.totalRecords++;
+	paging.offset = 0;
+	paging.pageSize = FRIEND_PAGE_SIZE;
+    //paging.totalRecords = FetchAll_for_Friend_List(head);
+    Paging_Locate_FirstPage(head, paging);
+    do {
+            system("clear");
+            printf("链表长度：%d\n",paging.totalRecords);
+            printf(
+                    "\n==============================================================\n");
+            printf(
+                    "********************** Friend  List **********************\n");
+            printf("%10s  %20s %15s\n", "account", "Name","status");
+            printf(
+                    "------------------------------------------------------------------\n");
+            Paging_ViewPage_ForEach(head, paging, node_friend_t, pos, i){
+                printf("%10s  %20s  %15d     \n",pos->recv_account,pos->nickname,pos->status);
+            }
+
+            printf(
+                    "------- Total Records:%2d ----------------------- Page %2d/%2d ----\n",
+                    paging.totalRecords, Pageing_CurPage(paging),
+                    Pageing_TotalPages(paging));
+            printf(
+                    "******************************************************************\n");
+            printf(
+                    "[P]revPage | [N]extPage | [Q]uery | [R]eturn");
+            printf(
+                    "\n==================================================================\n");
+            printf("Your Choice:");
+            fflush(stdin);
+            scanf("%c", &choice);
+            fflush(stdin);
+
+            switch (choice) {
+                case 'p':
+                case 'P':
+                    if (!Pageing_IsFirstPage(paging)) {
+                        Paging_Locate_OffsetPage(head, paging, -1, node_friend_t);
+                    }
+                    break;
+                case 'n':
+                case 'N':
+                    if (!Pageing_IsLastPage(paging)) {
+                        Paging_Locate_OffsetPage(head, paging, 1, node_friend_t);
+                    }
+                    break;
+            }
+        } while (choice != 'r' && choice != 'R');   
+        //链表在客户端退出时进行销毁
+}
+
+//接包
+//执行这个函数以后为在此文件中存储一个好友信息链表　可以进行各种操作
+//计划把数据接收来以后进行存放　以链表形式存储　分页形式显示
+//最后有一个标记位为　EOF　的结束包　
+int FetchAll_for_Friend_List()
+{
+    //List_DelNode(head);
+    recv_t pacage;
+    int ans=0;
+    while(1)
+    {
+        if(recv(fact_fd,&pacage,sizeof(recv_t),0)<0)
+        perror("error in recv\n");//收包
+
+        if(pacage.type==EOF_OF_BOX)
+        break;//接收到EOF结束符　退出接收循环
+
+        //利用数据包中数据对链表结点进行赋值
+        list_friend_t temp=(list_friend_t)malloc(sizeof(node_friend_t));
+        temp->status=pacage.conn_fd;//状态
+        strcpy(temp->recv_account,pacage.message_tmp);//好友账号
+        strcpy(temp->nickname,pacage.message);//昵称
+        //printf("%s\n",temp->nickname);
+        printf("%d::%d\n",++ans,temp->status);
+        List_AddTail(head,temp);//建立链表
+    }
+    getchar();
 }

@@ -14,6 +14,7 @@ int main(int argc,char **argv)  //暂时无全局变量
     char username[MAX_USERNAME];
     char register_tmp[MAX_ACCOUNT];
     recv_t Package;//登录请求时要发的包
+    List_Init(head,node_friend_t);     //初始化好友链表
     memset(&serv_addr,0,sizeof(struct sockaddr_in));
     serv_addr.sin_family=AF_INET; //ipv4 tcp
 
@@ -92,14 +93,14 @@ int main(int argc,char **argv)  //暂时无全局变量
     pthread_create(&pth1,NULL,method_client,NULL); //开一个线程专门收包
 	char choice;
 	 do { 
-		system("clear");
+		//system("clear");
 		printf("\n\n====================================================================\n");
 		printf("\n========您好，[%s]先生/女士,欢迎来到zhaolonga-happychat=========\n",username);
 		printf("\n==================================================================\n");
 		printf("     **************** zhaolonga-happychat ****************\n\n");
 		printf("      [A]添加好友                [D]删除好友\n");
 		printf("\n");
-		printf("      [E]查看好友列表             [C]查询演出票\n");
+		printf("      [S]查看好友列表             [C]查询演出票\n");
 		printf("                      \n");
 		printf("      [R]退票界面                      [Q]查询演出界面\n");
 		printf("                       \n");
@@ -118,13 +119,13 @@ int main(int argc,char **argv)  //暂时无全局变量
 		case 'a':
             Add_Friend(conn_fd);
 			break;
-         case 'd': 
-		 case 'D':
+         case 'D': 
+		 case 'd':
 		 	Del_Friend(conn_fd);
 			 break; 
-		case 'F':
-		case 'f':
-            system("clear");
+		case 'S':
+		case 's':
+            show_friend_list();
 			break;
 		case 'c': 
 		case 'C':
@@ -151,6 +152,7 @@ int main(int argc,char **argv)  //暂时无全局变量
 		}
 	} while ('E' != choice && 'e' != choice); 
     } 
+    List_Destroy(head, node_friend_t);//删除好友链表
     close(conn_fd);
     return 0;
 }

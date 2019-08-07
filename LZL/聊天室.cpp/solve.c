@@ -68,7 +68,6 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         if((row_in_messages_box=mysql_num_rows(res))==0)
         {
             send_data(sock->send_fd,BOX_NO_MESSAGES);
-            return 0;
         }else
         {
             send_data(sock->send_fd,BOX_HAVE_MESSAGS);
@@ -77,26 +76,38 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         //开始发送消息
         Box_t box;
         printf("%d\n",row_in_messages_box);
+        int flag=0;
+        if(row_in_messages_box==0) flag=1;
         while(row_in_messages_box--)
         {
             row=mysql_fetch_row(res);
             box.type=ADD_FRIENDS;      //时间类型　离线消息不止添加好友
             strcpy(box.message,row[3]);//消息
             strcpy(box.account,row[1]);//发送者
-            send(sock->send_fd,&box,sizeof(Box_t),0);
+            if(send(sock->send_fd,&box,sizeof(Box_t),0)<0)
+            perror("error in send\n");
             sprintf(buf,"delete from messages_box where recv_account = '%s' and send_acount = '%s' and message = '%s'",
             sock->send_Account,box.account,box.message);
-            printf("%s\n",buf);
+            //printf("%s\n",buf);
             mysql_query(mysql,buf);
         }
-        box.type=EOF_OF_BOX;
-        strcpy(box.message,row[3]);
-        send(sock->send_fd,&box,sizeof(Box_t),0);
+        if(flag!=1)
+        {
+            box.type=EOF_OF_BOX;
+            strcpy(box.message,row[3]);
+            send(sock->send_fd,&box,sizeof(Box_t),0);
+        }
         printf("全部信息发送完成\n");
     }
     else 
-    send_data(sock->send_fd,"@@@");//错误的请求
+    send_data(sock->send_fd,"@@@");//密码账号不匹配　返回错误
     mysql_free_result(res);
+
+    //发送好友列表的函数所需要的值登录函数中已设置　所以这个数据包可直接使用　
+    //有效位为其中的　send_Account 与 send_fd 
+    //谁发的　以及　套接字是多少
+    printf("函数进行到这里数据库查找数据\n");
+    List_friends_server(sock,mysql);
 }
 
 int register_server(recv_t * sock,MYSQL *mysql)
@@ -170,11 +181,13 @@ int add_friend_server_already_agree(recv_t *sock,MYSQL *mysql)//向朋友数据�
 {
     //friend数据表中第三项　是为了在删除时仅删除一项就把一对好友关系进行删除　
     //这个函数只需要操作下数据库就好
-    char buf[256];
+    char buf[512];
     char unique_for_del[64];
     Delete_for_friend_third(sock->recv_Acount,sock->send_Account,unique_for_del);
     unique_for_del[strlen(sock->recv_Acount)+strlen(sock->send_Account)+1]='\0';
+    printf("%s\n",unique_for_del);
     sprintf(buf,"insert into friend values('%s','%s','%s')",sock->recv_Acount,sock->send_Account,unique_for_del);
+    printf("加入数据库:%s\n",buf);
     mysql_query(mysql,buf);
     return 1;
 }
@@ -203,20 +216,24 @@ int List_friends_server(recv_t *sock,MYSQL *mysql) //因为数据库表建的不
     MYSQL_RES *res=NULL;
     int number=mysql_num_rows(result);
     MYSQL_ROW row,wor;
+    //printf("第一遍搜索：%d:\n",number);
     while(number--)//第一遍搜索的好友总数
     {
         row=mysql_fetch_row(result);
-
+        //printf("开始搜索好友！\n");
         sprintf(buf,"select *from Data where Account = '%s'",row[1]);//每一个好友的信息
+        //printf("%s\n",buf);
         mysql_query(mysql,buf);
         res=mysql_store_result(mysql);
         wor=mysql_fetch_row(res);
         strcpy(packet.message,wor[3]);//昵称
         strcpy(packet.message_tmp,row[1]);//好友账号
+        //printf("%s\n",packet.message); //测试用
         packet.conn_fd=atoi(wor[4]);//是否在线
         packet.send_fd=atoi(wor[5]);//好友套接字
         if((send(sock->send_fd,&packet,sizeof(recv_t),0))<0)
         perror("error in list_friend send\n");
+        printf("hello!\n");
     }
     mysql_free_result(result);
     mysql_free_result(res);  //释放一遍空间
@@ -227,7 +244,8 @@ int List_friends_server(recv_t *sock,MYSQL *mysql) //因为数据库表建的不
     mysql_query(mysql,buf);
     result = mysql_store_result(mysql);
     res=NULL;
-    number=mysql_num_rows(result);
+    number=mysql_num_rows(result);   //获取好友
+    //printf("第二遍搜索：%d:\n",number);
     while(number--)//第二遍搜索的好友总数
     {
         row=mysql_fetch_row(result);
@@ -242,6 +260,7 @@ int List_friends_server(recv_t *sock,MYSQL *mysql) //因为数据库表建的不
         packet.send_fd=atoi(wor[5]);//好友套接字
         if((send(sock->send_fd,&packet,sizeof(recv_t),0))<0)
         perror("error in list_friend send\n");
+        printf("hello!\n");
     }
     packet.type=EOF_OF_BOX;//好友消息的结束包
     if((send(sock->send_fd,&packet,sizeof(recv_t),0))<0)
