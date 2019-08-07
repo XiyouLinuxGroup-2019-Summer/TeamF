@@ -156,7 +156,7 @@ int login_client(int conn_fd,char *username)
         }
     }
     //下面这行代码是当时调错用的　错误原因为服务器逻辑出现问题
-    
+
     //Box_t box;
     //recv(conn_fd,&box,sizeof(box),0);   //处理多接收了一个包
     //printf("%s %d %s \n",box.message,box.type,box.account);
@@ -290,9 +290,10 @@ int Del_Friend(int conn_fd)
 {
     int              ret=0;
     recv_t           Package;
-    Package.type   = ADD_FRIENDS;
+    Package.type   = DEL_FRIENDS;
     Package.send_fd= conn_fd;
     char Account[MAX_ACCOUNT];
+    list_friend_t curpos;
     char message[MAX_RECV];   //添加好友时给对方发送的话
     char temp[64];   //就是一个接收消息的缓冲区
     system("clear");
@@ -308,6 +309,14 @@ int Del_Friend(int conn_fd)
     {
         perror("error in del friend send\n");
         return 0;
+    }
+    List_ForEach(head,curpos)
+    {
+        if(!strcpy(Account,curpos->recv_account));
+        {
+            List_DelNode(curpos);
+            break;
+        }
     }
     printf("%s have been delete!\n"); //没检测是否存在
     getchar();
@@ -397,8 +406,8 @@ int FetchAll_for_Friend_List()
         strcpy(temp->recv_account,pacage.message_tmp);//好友账号
         strcpy(temp->nickname,pacage.message);//昵称
         //printf("%s\n",temp->nickname);
-        printf("%d::%d\n",++ans,temp->status);
+        //printf("%d::%d\n",++ans,temp->status);
         List_AddTail(head,temp);//建立链表
     }
-    getchar();
+    //getchar();
 }

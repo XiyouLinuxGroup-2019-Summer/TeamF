@@ -72,10 +72,10 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         {
             send_data(sock->send_fd,BOX_HAVE_MESSAGS);
         }
-        printf("标志消息盒子　是否有数据的包发送成功  %d\n",row_in_messages_box);
+        //printf("标志消息盒子　是否有数据的包发送成功  %d\n",row_in_messages_box);
         //开始发送消息
         Box_t box;
-        printf("%d\n",row_in_messages_box);
+        //printf("%d\n",row_in_messages_box);
         int flag=0;
         if(row_in_messages_box==0) flag=1;
         while(row_in_messages_box--)
@@ -97,7 +97,7 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
             strcpy(box.message,row[3]);
             send(sock->send_fd,&box,sizeof(Box_t),0);
         }
-        printf("全部信息发送完成\n");
+        //printf("全部信息发送完成\n");
     }
     else 
     send_data(sock->send_fd,"@@@");//密码账号不匹配　返回错误
@@ -106,7 +106,7 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     //发送好友列表的函数所需要的值登录函数中已设置　所以这个数据包可直接使用　
     //有效位为其中的　send_Account 与 send_fd 
     //谁发的　以及　套接字是多少
-    printf("函数进行到这里数据库查找数据\n");
+    //printf("函数进行到这里数据库查找数据\n");
     List_friends_server(sock,mysql);
 }
 
@@ -164,14 +164,14 @@ int add_friend_server(recv_t *sock,MYSQL *mysql)
     int tmp=atoi(row[5]);
     if(atoi(row[4])==1)  //在线
     {
-        printf("11\n");
+        //printf("11\n");
         if(send(tmp,sock,sizeof(recv_t),0)<0)  //根据账号查找到接收者的套接字
         perror("error in send\n");//需要在线消息盒子　否则无法实现
     }else  //不在线把数据放到消息盒子
     {
-        printf("212\n");
+        //printf("212\n");
         sprintf(buf,"insert into messages_box values('%d','%s','%s','%s')",tmp,sock->send_Account,sock->recv_Acount,sock->message);
-        printf("%s\n",buf);
+        //printf("%s\n",buf);
         mysql_query(mysql,buf);
     }
     //成功后不发送消息
@@ -185,9 +185,9 @@ int add_friend_server_already_agree(recv_t *sock,MYSQL *mysql)//向朋友数据�
     char unique_for_del[64];
     Delete_for_friend_third(sock->recv_Acount,sock->send_Account,unique_for_del);
     unique_for_del[strlen(sock->recv_Acount)+strlen(sock->send_Account)+1]='\0';
-    printf("%s\n",unique_for_del);
+    //printf("%s\n",unique_for_del);
     sprintf(buf,"insert into friend values('%s','%s','%s')",sock->recv_Acount,sock->send_Account,unique_for_del);
-    printf("加入数据库:%s\n",buf);
+    //printf("加入数据库:%s\n",buf);
     mysql_query(mysql,buf);
     return 1;
 }
@@ -196,9 +196,13 @@ int del_friend_server(recv_t *sock,MYSQL *mysql)
 {
     char buf[256];
     char unique_for_del[64];
+    memset(unique_for_del,0,sizeof(unique_for_del)); 
+    //再说一遍　初始化及其重要　其中很可能有一些废数据
     Delete_for_friend_third(sock->recv_Acount,sock->send_Account,unique_for_del);
     unique_for_del[strlen(sock->recv_Acount)+strlen(sock->send_Account)+1]='\0';
-    sprintf("delete from friend where del = '%s'",unique_for_del);
+    //printf("%s %s %s\n",sock->recv_Acount,sock->send_Account,unique_for_del);
+    sprintf(buf,"delete from friend where del = '%s'",unique_for_del);
+    printf("%s\n",buf);
     mysql_query(mysql,buf);
     return 1;
 }
@@ -233,7 +237,7 @@ int List_friends_server(recv_t *sock,MYSQL *mysql) //因为数据库表建的不
         packet.send_fd=atoi(wor[5]);//好友套接字
         if((send(sock->send_fd,&packet,sizeof(recv_t),0))<0)
         perror("error in list_friend send\n");
-        printf("hello!\n");
+        //printf("hello!\n");
     }
     mysql_free_result(result);
     mysql_free_result(res);  //释放一遍空间
@@ -260,7 +264,7 @@ int List_friends_server(recv_t *sock,MYSQL *mysql) //因为数据库表建的不
         packet.send_fd=atoi(wor[5]);//好友套接字
         if((send(sock->send_fd,&packet,sizeof(recv_t),0))<0)
         perror("error in list_friend send\n");
-        printf("hello!\n");
+        //printf("hello!\n");
     }
     packet.type=EOF_OF_BOX;//好友消息的结束包
     if((send(sock->send_fd,&packet,sizeof(recv_t),0))<0)
