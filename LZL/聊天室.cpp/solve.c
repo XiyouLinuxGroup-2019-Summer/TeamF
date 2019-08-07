@@ -58,6 +58,11 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         sprintf(buf,"select *from messages_box where recv_account = '%s'",sock->send_Account);
         mysql_query(mysql,buf);
         res=mysql_store_result(mysql);
+        if(res==NULL)  //等于空就是出现错误　成功不会为NULL 查询的行为０也不会为NULL
+        {
+            perror("error in mysql_store_result\n");
+            return 0;
+        }
         //先发送一个代表消息盒子是否有信息的包　客户端做出接收　
         //两种情况分情况编写代码 因为发信息不知道什么时候结束　只能在结束时发送一个代表消息结束的包
         if((row_in_messages_box=mysql_num_rows(res))==0)
@@ -68,19 +73,25 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         {
             send_data(sock->send_fd,BOX_HAVE_MESSAGS);
         }
-        printf("标志消息盒子　是否有数据的包发送成功\n");
+        printf("标志消息盒子　是否有数据的包发送成功  %d\n",row_in_messages_box);
         //开始发送消息
         Box_t box;
-        while(row=mysql_fetch_row(res))
+        printf("%d\n",row_in_messages_box);
+        while(row_in_messages_box--)
         {
+            row=mysql_fetch_row(res);
             box.type=ADD_FRIENDS;      //时间类型　离线消息不止添加好友
             strcpy(box.message,row[3]);//消息
             strcpy(box.account,row[1]);//发送者
-            send(sock->send_fd,&buf,sizeof(Box_t),0);
+            send(sock->send_fd,&box,sizeof(Box_t),0);
+            sprintf(buf,"delete from messages_box where recv_account = '%s' and send_acount = '%s' and message = '%s'",
+            sock->send_Account,box.account,box.message);
+            printf("%s\n",buf);
+            mysql_query(mysql,buf);
         }
         box.type=EOF_OF_BOX;
         strcpy(box.message,row[3]);
-        send(sock->send_fd,&buf,sizeof(Box_t),0);
+        send(sock->send_fd,&box,sizeof(Box_t),0);
         printf("全部信息发送完成\n");
     }
     else 
@@ -135,6 +146,7 @@ int add_friend_server(recv_t *sock,MYSQL *mysql)
     int ret;
     char recv_buf[MAX_USERNAME];
     char buf[256];
+    char buffer[64];
     sprintf(buf,"select *from Data where Account = %s",sock->recv_Acount);
     mysql_query(mysql,buf);
     MYSQL_RES *result = mysql_store_result(mysql);
@@ -142,22 +154,30 @@ int add_friend_server(recv_t *sock,MYSQL *mysql)
     int tmp=atoi(row[5]);
     if(atoi(row[4])==1)  //在线
     {
+        printf("11\n");
+        strcpy(buffer,"@@@@@");
         if(send(tmp,sock,sizeof(recv_t),0)<0)  //根据账号查找到接收者的套接字
         perror("error in send\n");//需要在线消息盒子　否则无法实现
     }else  //不在线把数据放到消息盒子
     {
-        sprintf(buf,"insert into messages_box values('%d','%s','%s',%s')",tmp,sock->send_Account,sock->recv_Acount,sock->message);
+        printf("212\n");
+        sprintf(buf,"insert into messages_box values('%d','%s','%s','%s')",tmp,sock->send_Account,sock->recv_Acount,sock->message);
+        printf("%s\n",buf);
         mysql_query(mysql,buf);
+        strcpy(buffer,"yyy");
     }
+    if(send(sock->send_fd,buffer,64,0)<0)
+    perror("error in send\n");
 }
 
 int add_friend_server_already_agree(recv_t *sock,MYSQL *mysql)//向朋友数据库加入消息
 {
     //friend数据表中第三项　是为了在删除时仅删除一项就把一对好友关系进行删除　
     //这个函数只需要操作下数据库就好
-    char buf[256];
+    char buf[512];
     char unique_for_del[64];
     Delete_for_friend_third(sock->recv_Acount,sock->send_Account,unique_for_del);
+    unique_for_del[strlen(sock->recv_Acount)+strlen(sock->send_Account)+1]='\0';
     sprintf(buf,"insert into friend values('%s','%s','%s')",sock->recv_Acount,sock->send_Account,unique_for_del);
     mysql_query(mysql,buf);
 }

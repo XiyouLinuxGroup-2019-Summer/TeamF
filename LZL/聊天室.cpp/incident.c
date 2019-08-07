@@ -242,7 +242,7 @@ int Add_Friend(int conn_fd)
     char message[MAX_RECV];   //添加好友时给对方发送的话
     char temp[64];   //就是一个接收消息的缓冲区
     system("clear");
-
+    getchar();
     printf("Please enter a Account you want to add:");
     get_userinfo(Account,MAX_ACCOUNT);
     printf("please enter your friendly greeting:\n");
@@ -264,10 +264,12 @@ int Add_Friend(int conn_fd)
     if(temp[0]=='@')  //正确的话发送一个"y“
     {
         printf("Password change failed\n");
+        getchar();
         return 0;
     }else
     {
         printf("The message has been sent,please wait for it to be accepted\n");
+        getchar();
     }
     return 1;
 }
