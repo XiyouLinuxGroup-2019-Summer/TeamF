@@ -93,14 +93,15 @@ int main(int argc,char **argv)  //暂时无全局变量
     pthread_create(&pth1,NULL,method_client,NULL); //开一个线程专门收包
 	char choice;
 	 do { 
-		//system("clear");
+		system("clear");
 		printf("\n\n====================================================================\n");
 		printf("\n========您好，[%s]先生/女士,欢迎来到zhaolonga-happychat=========\n",username);
 		printf("\n==================================================================\n");
 		printf("     **************** zhaolonga-happychat ****************\n\n");
 		printf("      [A]添加好友                [D]删除好友\n");
 		printf("\n");
-		printf("      [S]查看好友列表             [C]查询演出票\n");
+		printf("      [S]查看好友列表             [C]查看好友请求\n");
+        //消息盒子中只显示好友请求　其他在与好友聊天时自动载入消息链表
 		printf("                      \n");
 		printf("      [R]退票界面                      [Q]查询演出界面\n");
 		printf("                       \n");

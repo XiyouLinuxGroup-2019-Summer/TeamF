@@ -1,6 +1,6 @@
 #ifndef INCIDENT_H_
 #define INCIDENT_H_
-#include"incident.c"
+#include"incident.cpp"
 
 int my_recv(int conn_fd,char *data_buf,int len);
 int get_userinfo(char *buf,int len);

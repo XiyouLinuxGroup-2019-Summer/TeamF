@@ -274,6 +274,41 @@ int List_friends_server(recv_t *sock,MYSQL *mysql) //因为数据库表建的不
     return 1;
 }
 
+//接收到客户端的发送的消息　在数据库中判断接收者是否在线　在线直接发送　不然不用管了　
+//等对方上线时消息自动加载　写完后记得修改状态的问题　最好正常结束发一个结束包　修改请求
+int send_messages_server(recv_t *sock,MYSQL *mysql)
+{
+    //判断是否在线　在线发送　然后把消息加入离线消息盒子(在线与不在线都要加入离线消息盒子　保存聊天信息)
+    int ret;
+    char recv_buf[MAX_USERNAME];
+    char buf[256];
+    sprintf(buf,"select *from Data where Account = '%s'",sock->recv_Acount);
+    mysql_query(mysql,buf);
+    MYSQL_RES *result = mysql_store_result(mysql);
+    MYSQL_ROW row=mysql_fetch_row(result);
+    if(row[4]==1)//在线　直接发送　消息盒子接收
+    {
+        recv_t package;
+        strcpy(package.send_Account,sock->send_Account);
+        strcpy(package.recv_Acount,sock->recv_Acount);
+        strcpy(package.message_tmp,row[3]);
+        strcpy(package.message,sock->message);
+        package.type=SEND_MESSAGES;
+        if(send(sock->send_fd,&package,sizeof(recv_t),0)<0)
+        {
+            perror("error in server send friend message\n");
+        }
+    }
+    //开始把消息存入数据库　做标记　为好友信息
+    mysql_free_result(result);
+    
+    sprintf(buf,"insert into messages_box values('%d',%s','%s','%s')",
+    sock->type,sock->send_Account,sock->recv_Acount,sock->message);
+    mysql_query(mysql,buf);
+
+}
+
+
 int *solve(void *arg)
 {
     MYSQL mysql;
@@ -306,6 +341,8 @@ int *solve(void *arg)
         case LIST_FRIENDS:
             List_friends_server(recv_buf,&mysql);
             break;
+        case SEND_MESSAGES:
+            send_messages_server(recv_buf,&mysql);
         default:
             printf("error\n");
             break;

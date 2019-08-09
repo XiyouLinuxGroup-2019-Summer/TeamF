@@ -6,6 +6,7 @@
 
 #define IP                 (127.0.0.1)       //本地ip
 
+#define MESSADES_PAGE_SIZE 10     //好友消息分页最大数
 #define FRIEND_PAGE_SIZE   5      //好友列表分页最大数
 #define EVENTS_MAX_SIZE    1024   //epoll接收事件最大数 
 #define MAX_CONTECT_SIZE   1024   //服务器最大连接数
@@ -13,6 +14,8 @@
 #define MAX_ACCOUNT        32     //账号长度最大值
 #define MAX_PASSWORD       32     //密码最大长度
 #define MAX_TELEPHONE      32     //找回密码使用的电话最长长度
+#define MESSAGE_FETCH_SEND 1      //在登录时加载消息　消息类型为
+#define MESSAGE_FETCH_RECV 2
 
 #define MAX_RECV           8096    //发包的大小 与接包大小相同
 
@@ -32,6 +35,7 @@
 #define ADD_FRIENDS_QUERY   4       //收到添加好友请求后做出答复的数据类型
 #define DEL_FRIENDS         5       //删除好友
 #define LIST_FRIENDS        6       //显示好友列表
+#define SEND_MESSAGES       7       //单聊　发送信息
 
 
 /*-----------------------------------------------*/
@@ -50,11 +54,22 @@ typedef struct {
 
 typedef struct 
 {
+	char usename[MAX_USERNAME];
     char account[MAX_ACCOUNT];
     char message[MAX_RECV];
     int type;    //事件类型
 }Box_t;
 
+typedef struct message_node
+{
+	int type; //好友请求　单聊记录
+	char send_account[MAX_ACCOUNT]; //朋友账号
+	char recv_account[MAX_ACCOUNT]; //自己账号
+	char nickname[MAX_USERNAME];    //朋友昵称
+	char messages[MAX_RECV];
+	struct message_node *next;
+	struct message_node *prev;
+}node_messages_t,*list_messages_t;
 
 
 typedef struct friend_node//好友链表类型
