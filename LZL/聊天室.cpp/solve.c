@@ -80,6 +80,7 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         if(row_in_messages_box==0) flag=1;
         while(row_in_messages_box--)
         {
+
             row=mysql_fetch_row(res);
             box.type=ADD_FRIENDS;      //时间类型　离线消息不止添加好友
             strcpy(box.message,row[3]);//消息
@@ -108,6 +109,54 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     //谁发的　以及　套接字是多少
     //printf("函数进行到这里数据库查找数据\n");
     List_friends_server(sock,mysql);
+    printf("好友列表加载完成\n");
+    //从消息记录中查找账号所对应的消息记录　标记位为ower_account
+
+
+    //根据登陆者的账号在数据库中进行匹配
+    sprintf(buf,"select *from messages_record where ower_account = '%s'",sock->send_Account);
+    mysql_query(mysql,buf);
+    MYSQL_RES *resu = mysql_store_result(mysql);
+    MYSQL_ROW rowwor=mysql_fetch_row(resu);
+    int row_in_messages_record;
+    Box_t box;
+    //根据数据库中有无登录者消息记录　先发送一个起始包　
+    printf("运行到发送消息标记包\n");
+    if((row_in_messages_record=mysql_num_rows(resu))==0)
+    {
+        send_data(sock->send_fd,BOX_NO_MESSAGES);
+        return 0; //不退出会在后面多发一个包
+    }else
+    {
+        send_data(sock->send_fd,BOX_HAVE_MESSAGS);
+    }
+    while(row_in_messages_record--)
+    {
+        rowwor=mysql_fetch_row(resu); //获取消息信息
+
+        if(!strcmp(sock->send_Account,rowwor[1])) //查找到与之聊天的好友的正确账号　//为查询昵称
+        sprintf(buf,"select *from Data where Account = '%s'",rowwor[2]);
+        else 
+        sprintf(buf,"select *from Data where Account = '%s'",rowwor[1]);
+        mysql_query(mysql,buf);
+        MYSQL_RES *resu_tmp = mysql_store_result(mysql);
+        MYSQL_ROW rowwor_tmp=mysql_fetch_row(resu_tmp);
+    
+        strcpy(box.message,rowwor[3]); //消息
+        if(!strcmp(rowwor[1],sock->send_Account))
+        strcpy(box.account,rowwor[2]); //必须保证是好友账号
+        else 
+        strcpy(box.account,rowwor[1]);
+        strcpy(box.usename,rowwor_tmp[3]);//发送者昵称
+        box.type=SEND_MESSAGES; //消息类型
+        mysql_free_result(rowwor_tmp);
+        if(send(sock->send_fd,&box,sizeof(box),0)<0)
+        perror("error in send a message when logging in\n");
+
+    }
+    box.type=EOF_OF_BOX;
+    if(send(sock->send_fd,&box,sizeof(box),0)<0) //发送一个结束包
+    perror("error in send a message when logging in\n");
 }
 
 int register_server(recv_t * sock,MYSQL *mysql)
@@ -286,7 +335,7 @@ int send_messages_server(recv_t *sock,MYSQL *mysql)
     mysql_query(mysql,buf);
     MYSQL_RES *result = mysql_store_result(mysql);
     MYSQL_ROW row=mysql_fetch_row(result);
-    if(row[4]==1)//在线　直接发送　消息盒子接收
+    if(atoi(row[4])==1)//在线　直接发送　消息盒子接收 //其中消息进入后直接载入　不区分已读未读
     {
         recv_t package;
         strcpy(package.send_Account,sock->send_Account);
@@ -294,7 +343,7 @@ int send_messages_server(recv_t *sock,MYSQL *mysql)
         strcpy(package.message_tmp,row[3]);
         strcpy(package.message,sock->message);
         package.type=SEND_MESSAGES;
-        if(send(sock->send_fd,&package,sizeof(recv_t),0)<0)
+        if(send(atoi(row[5]),&package,sizeof(recv_t),0)<0)
         {
             perror("error in server send friend message\n");
         }
@@ -302,10 +351,14 @@ int send_messages_server(recv_t *sock,MYSQL *mysql)
     //开始把消息存入数据库　做标记　为好友信息
     mysql_free_result(result);
     
-    sprintf(buf,"insert into messages_box values('%d',%s','%s','%s')",
-    sock->type,sock->send_Account,sock->recv_Acount,sock->message);
+    sprintf(buf,"insert into messages_record values('%s',%s','%s','%s')",
+    sock->send_Account,sock->send_Account,sock->recv_Acount,sock->message);
     mysql_query(mysql,buf);
 
+    sprintf(buf,"insert into messages_record values('%s',%s','%s','%s')",
+    sock->recv_Acount,sock->send_Account,sock->recv_Acount,sock->message);
+    mysql_query(mysql,buf);//向消息记录数据库中加入消息　消息有两份
+    //根据　ower_account 位来标记消息的所属者是谁　从而在登录时进行加载
 }
 
 
