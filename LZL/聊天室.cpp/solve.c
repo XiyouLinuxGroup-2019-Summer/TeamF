@@ -343,7 +343,7 @@ int send_messages_server(recv_t *sock,MYSQL *mysql)
         strcpy(package.message_tmp,row[3]);
         strcpy(package.message,sock->message);
         package.type=SEND_MESSAGES;
-        if(send(atoi(row[5]),&package,sizeof(recv_t),0)<0)
+        if(send(atoi(row[5]),&package,sizeof(recv_t),0)<0) 
         {
             perror("error in server send friend message\n");
         }
@@ -351,12 +351,14 @@ int send_messages_server(recv_t *sock,MYSQL *mysql)
     //开始把消息存入数据库　做标记　为好友信息
     mysql_free_result(result);
     
-    sprintf(buf,"insert into messages_record values('%s',%s','%s','%s')",
-    sock->send_Account,sock->send_Account,sock->recv_Acount,sock->message);
+    sprintf(buf,"insert into messages_record values('%s','%s','%s','%s')",
+    sock->send_Account,sock->recv_Acount,sock->recv_Acount,sock->message);
+    printf("%s\n",buf);
     mysql_query(mysql,buf);
 
-    sprintf(buf,"insert into messages_record values('%s',%s','%s','%s')",
+    sprintf(buf,"insert into messages_record values('%s','%s','%s','%s')",
     sock->recv_Acount,sock->send_Account,sock->recv_Acount,sock->message);
+    printf("%s\n",buf);
     mysql_query(mysql,buf);//向消息记录数据库中加入消息　消息有两份
     //根据　ower_account 位来标记消息的所属者是谁　从而在登录时进行加载
 }
@@ -371,6 +373,7 @@ int *solve(void *arg)
     mysql_set_character_set(&mysql,"utf8");//调整为中文字符
     recv_t *recv_buf=(recv_t *)arg;
     int recv_flag=recv_buf->type;
+    printf("消息号码　: %d\n",recv_flag);
     switch (recv_flag)
     {
         case LOGIN :
@@ -396,6 +399,7 @@ int *solve(void *arg)
             break;
         case SEND_MESSAGES:
             send_messages_server(recv_buf,&mysql);
+            break;
         default:
             printf("error\n");
             break;

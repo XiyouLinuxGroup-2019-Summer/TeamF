@@ -122,6 +122,7 @@ int main()
                     mysql_query(&mysql,buf);
                     MYSQL_RES *result = mysql_store_result(&mysql);
                     MYSQL_ROW row=mysql_fetch_row(result);
+                    mysql_free_result(result);
                     sprintf(buf,"update Data set status = \"0\" where send_recv_fd = \"%d\"",events[i].data.fd);
                     mysql_query(&mysql,buf);
                     mysql_free_result(result);
