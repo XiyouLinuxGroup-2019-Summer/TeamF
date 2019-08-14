@@ -14,7 +14,10 @@ int main(int argc,char **argv)  //暂时无全局变量
     char username[MAX_USERNAME];
     char register_tmp[MAX_ACCOUNT];
     recv_t Package;//登录请求时要发的包
+
     List_Init(head,node_friend_t);     //初始化好友链表
+    List_Init(group_head,node_group_t); //初始化群链表　其中包含全部群
+
     memset(&serv_addr,0,sizeof(struct sockaddr_in));
     serv_addr.sin_family=AF_INET; //ipv4 tcp
 
@@ -103,7 +106,7 @@ int main(int argc,char **argv)  //暂时无全局变量
 		printf("      [S]查看好友列表             [C]查看好友请求\n");
         //消息盒子中只显示好友请求　其他在与好友聊天时自动载入消息链表
 		printf("                      \n");
-		printf("      [R]退票界面                      [Q]查询演出界面\n");
+		printf("      [R]查看群                      [Q]查询演出界面\n");
 		printf("                       \n");
 		printf("      [N]统计销售额界面                [L]统计票房界面\n");
 		printf("                       \n");

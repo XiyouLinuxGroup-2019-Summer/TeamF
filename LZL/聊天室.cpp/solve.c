@@ -366,6 +366,93 @@ int send_messages_server(recv_t *sock,MYSQL *mysql)
 }
 
 
+int register_group_server(recv_t *sock,MYSQL *mysql)
+{
+    char account[MAX_ACCOUNT];
+    char buf[256];
+    recv_t packet;
+    memset(account,0,sizeof(account));
+    mysql_query(mysql,"select *from Account");
+    MYSQL_RES *result = mysql_store_result(mysql);
+    MYSQL_ROW row=mysql_fetch_row(result);
+
+    sprintf(account,"%d",atoi(row[0])+1);
+    sprintf(buf,"update Account set Account = \"%s\" where Account = \"%s\"",account,row[0]);
+    mysql_query(mysql,buf);//更新数据　保证不重复
+    mysql_free_result(result);
+    sprintf(buf,"insert into group_list values('%s','%s','%s','%d')",
+    account,sock->send_Account,sock->message,OWNER);//把这个群存入数据库
+    mysql_query(mysql,buf);
+
+    if(send(sock->send_fd,account,sizeof(account),0)<0)
+    perror("error in register group !\n");
+}
+
+int Add_group_server(recv_t *sock,MYSQL *mysql)
+{
+    char account[MAX_ACCOUNT];
+    char buf[256];
+    recv_t packet;
+    memset(account,0,sizeof(account));
+    sprintf(buf,"insert into group_list values('%s','%s','%s','%d')",
+    sock->message,sock->recv_Acount,sock->message_tmp,COMMON);//成员姓名
+    
+    printf("%s\n",buf);
+    mysql_query(mysql,buf);
+    mysql_query(mysql,"select *from group_list");
+    MYSQL_RES *result = mysql_store_result(mysql);
+    MYSQL_ROW row=mysql_fetch_row(result);
+    strcpy(buf,row[2]);
+    if(send(sock->send_fd,buf,sizeof(buf),0)<0) //发送群名称
+    perror("error in send!(add group server)\n");
+
+    return 1;
+}
+
+int Quit_group_server(recv_t *sock,MYSQL *mysql)
+{
+    char buf[256];
+    sprintf(buf,"delete from group_list where member_account = '%s' and group_account = '%s'",
+    sock->recv_Acount,sock->message);
+    mysql_query(mysql,buf);
+}
+
+int Dissolve_server(recv_t *sock,MYSQL *mysql)//数据库中删除相关数据　×两张表的数据
+{
+    int ret;
+    char recv_buf[MAX_USERNAME];//登录时默认使用字符串
+    int flag_recv=USERNAME;
+    char buf[256];
+    sprintf(buf,"delete group_list where group_account = %s",sock->recv_Acount);
+    mysql_query(mysql,buf);
+    //直接删除即可　已经在客户端检测过有权限　
+    sprintf(buf,"delete group_messsges_list where group_account = %s",sock->recv_Acount);
+    mysql_query(mysql,buf);
+    //两张表中的数据都要删除
+    //在这里其实可以改良　就是删除的时候给每一个成员发送一个包　消息盒子接收　随即删除
+    //但是没时间了
+    return 0;
+}
+
+int Set_Admin_server(recv_t *sock,MYSQL *mysql)
+{
+    char buf[256];
+    memset(buf,0,sizeof(buf));
+    sprintf(buf,"update group_list set type = '%d' where group_account = '%s' and member_account'%s'",
+    ADMIN,sock->message_tmp,sock->message);
+    mysql_query(mysql,buf);
+    //其实应该给每一个群员发送一个更新消息
+    return 0;
+}
+
+int Kicking_server(recv_t *sock,MYSQL *mysql)
+{
+    char buf[256];
+    sprintf(buf,"delete group_list where group_account = '%s' and member_account = '%s'",
+    sock->message_tmp,sock->message);//删除掉此人
+    mysql_query(mysql,buf);
+}
+
 int *solve(void *arg)
 {
     MYSQL mysql;
@@ -401,6 +488,24 @@ int *solve(void *arg)
             break;
         case SEND_MESSAGES:
             send_messages_server(recv_buf,&mysql);
+            break;
+        case REGISTER_GROUP:
+            register_group_server(recv_buf,&mysql);
+            break;
+        case ADD_GROUP:
+            Add_group_server(recv_buf,&mysql);
+            break;
+        case QUIT:
+            Quit_group_server(recv_buf,&mysql);
+            break;
+        case DISSOLVE:
+            Dissolve_server(recv_buf,&mysql);
+            break;
+        case SET_ADMIN:
+            Set_Admin_server(recv_buf,&mysql);
+            break;
+        case KICKING:
+            Kicking_server(recv_buf,&mysql);
             break;
         default:
             printf("error\n");

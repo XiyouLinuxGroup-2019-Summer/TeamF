@@ -16,14 +16,20 @@ char gl_account[MAX_ACCOUNT]; //以一个全局变量记录账号
 int  fact_fd;          //记录服务器套接字
 char fact_name[MAX_USERNAME];
 int tt=1;  //更新映射表主键
+int dd=1;  //更新群与好友和消息的映射关系
 list_friend_t head;//存储一次登录的好友信息
 map<int,int>mp; //主键为账号　键值为头指针
+map<int,int>mp_group;//群的映射表
 
 list_messages_t Messages[1024]; //与每一个好友的消息链表
 
-list_messages_t Message_BOX;
+list_messages_t Message_BOX;//消息盒子链表
 
+list_group_t group_head; //群链表 //每一个群分配一个唯一主键　
 
+list_member_t member[1024];//每一个群中的群员链表
+
+list_group_messages_t group_messages[1024];//每一个群中的消息链表
 
 
 
@@ -544,7 +550,6 @@ int Chat(char *account)//参数为好友账号
                     break;
             }
             if(flag) break;
-            usleep(500); //阻塞0.5秒　重新从消息链表加载
         } 
 }
 
@@ -637,4 +642,230 @@ int show_friend_list()//套接字为全局变量
             }
         } while (choice != 'r' && choice != 'R');   
         //链表在客户端退出时进行销毁
+}
+
+
+//注册成功后要加入群列表　
+//注册请求　返回一个唯一的群号
+//和登录账号用一个　都是唯一的
+int register_group_client(int conn_fd)  
+{
+    int ret;
+    recv_t           Package;
+    Package.type   = REGISTER_GROUP;
+    Package.send_fd= conn_fd; //这个人要被标记为群主
+    char nickname[MAX_USERNAME];
+    char account[MAX_ACCOUNT];
+    //system("clear");
+
+    //收集注册信息
+    printf("Welcome to register group!\n");
+    printf("please enter your group nickname,we will give your a unique account.\n");
+    printf("please enter you nickname!\n");
+    get_userinfo(nickname,MAX_USERNAME);
+    strcpy(Package.message,nickname);
+    strcpy(Package.send_Account,gl_account);
+    if((ret=send(conn_fd,&Package,sizeof(recv_t),0))<0)
+    {
+        perror("error in register send\n");
+        return 0;
+    }
+    if((ret=my_recv(conn_fd,account,MAX_ACCOUNT))<0) //接收账号　在服务器存入数据库
+    {
+        perror("error in register send\n");
+        return 0;
+    }
+    if(account[0]==ERROR_IN_LOGIN)//这个标记位可以标记所有的错误事件
+    {
+        perror("error in server data\n");
+        return 0;
+    }
+    printf("This is your Account ,Don't forget it!\n");
+    printf("Account:%s\n",account);
+    printf("please enter enter key for quit!\n");
+    getchar();
+
+    list_group_t tmp=(list_group_t)malloc(sizeof(node_group_t));
+    strcpy(tmp->nickname,nickname);
+    strcpy(tmp->account,account);
+    List_AddTail(group_head,tmp);//加入到群链表
+
+    mp[atoi(account)]=dd++; //分配唯一主键
+    List_Init(member[mp[atoi(account)]],node_member_t);//初始化这个群的成员链表
+    list_member_t temp=(list_member_t)malloc(sizeof(node_member_t));
+
+    strcpy(temp->account,gl_account);
+    strcpy(temp->nickname,fact_name);
+    temp->type=OWNER;  //申请者为群主
+
+    List_AddTail(member[mp[atoi(account)]],temp); //加入一个新的成员
+
+    return 1;   //发送正确且收到账号消息返回１
+}
+
+int Add_group(int conn_fd)
+{
+    int              ret=0;
+    recv_t           Package;
+    Package.type   = ADD_GROUP;
+    Package.send_fd= conn_fd;
+    strcpy(Package.recv_Acount,gl_account);
+    strcpy(Package.message_tmp,fact_name);
+    char Account[MAX_ACCOUNT];
+    char message[MAX_RECV];   //添加好友时给对方发送的话
+    char temp[64];   //就是一个接收消息的缓冲区
+    char buf[MAX_USERNAME];
+    system("clear");
+    getchar();
+    printf("Please enter a Group_Account you want to add:");
+    get_userinfo(Account,MAX_ACCOUNT);
+    strcpy(Package.message,Account); //要加入的账号
+
+    if((ret=send(conn_fd,&Package,sizeof(recv_t),0))<0)
+    {
+        perror("error in add friend send\n");
+        return 0;
+    }
+    else printf("You have joined this group:%s\n",Account);
+    getchar();
+    if(recv(conn_fd,buf,sizeof(buf),0)<0) //返回一个名称
+    perror("error in recv\n");
+
+    list_group_t tmp=(list_group_t)malloc(sizeof(node_group_t));
+    strcpy(tmp->account,Account);
+    strcpy(tmp->nickname,buf);
+
+    List_AddTail(group_head,tmp);//相当于当先用户加入一个新的群
+    //登录阶段加载所有消息记录　以便加入新群后有消息　其实可以加入后再从服务器获取
+    //项目时间快到了只能先赶进度了
+    
+    //消息　
+    return 1;
+}
+
+int Quit_group(int conn_fd)
+{
+    int              ret=0;
+    recv_t           Package;
+    Package.type   = QUIT;
+    Package.send_fd= conn_fd;
+    strcpy(Package.recv_Acount,gl_account);//本身的账号
+    char Account[MAX_ACCOUNT];
+    char message[MAX_RECV];   //添加好友时给对方发送的话
+    char temp[64];   //就是一个接收消息的缓冲区
+    char buf[MAX_USERNAME];
+    //system("clear");
+    getchar();
+    printf("Please enter a Group_Account you want to quit:");
+    get_userinfo(Account,MAX_ACCOUNT);
+    strcpy(Package.message,Account); //要删除的账号
+
+    if((ret=send(conn_fd,&Package,sizeof(recv_t),0))<0)
+    {
+        perror("error in add friend send\n");
+        return 0;
+    }
+    else printf("You have quited this group:%s\n",Account);
+    getchar();
+    list_group_t tmp;
+    List_ForEach(group_head,tmp)      //从组群中删除这个群
+    {
+        if(!strcpy(tmp->account,gl_account))
+        {
+            List_DelNode(tmp);
+            break;
+        }
+    }
+    return 1;
+}
+
+int Dissolve(int conn_fd)
+{
+    char buf[256];
+    list_member_t curps;
+    char account[MAX_ACCOUNT];
+    recv_t packet;
+    packet.type=DISSOLVE;
+    printf("please enter the group you want to dismiss\n");
+    scanf("%s",account);
+    getchar();
+    strcpy(packet.recv_Acount,account);//要解散的群号
+    List_ForEach(member[mp_group[atoi(account)]],curps)
+    {
+        if(!strcpy(curps->account,gl_account))
+        {
+            if(curps->type==OWNER)
+            {
+                if(send(conn_fd,&packet,sizeof(packet),0)<0)
+                perror("error in send dissolve!\n");
+                List_DelNode(curps);//在本地删除链表中的数据
+                return 0;
+            }
+        }
+    }
+    printf("Lack of permissions\n");
+    return 1;
+}
+
+
+//该函数用在查看群列表以后　可以将某人设为管理员
+int Set_Admin(int conn_fd,char * count) //后一个参数为当前群号
+{
+    list_member_t curps;
+    char account[MAX_ACCOUNT];
+    recv_t package;
+    memset(&package,0,sizeof(package));
+    int flag=0;
+    List_ForEach(member[mp_group[atoi(count)]],curps){
+        if(!strcpy(gl_account,curps->account) && curps->type==OWNER){
+            flag=1;
+            break;
+        }
+    }
+    if(!flag){
+        printf("Lack of permissions!\n");
+        return 0;
+    }else{
+        package.type=SET_ADMIN;
+        printf("please enter who you what to talk about as admin:\n");
+        scanf("%s",account);
+        getchar();
+        strcpy(package.message,account);    //成为管理员的账号
+        strcpy(package.message_tmp,count);  //群号
+        if(send(conn_fd,&package,sizeof(recv_t),0)<0)//在服务器修改这个账号的状态
+        perror("error in send!\n");
+        List_ForEach(member[mp_group[atoi(count)]],curps){
+            if(!strcpy(account,curps->account)){
+                curps->type=ADMIN;//在本地设置为管理员
+                break;
+            }
+        }
+    }
+}
+
+//上下这两个函数是在进入群员列表的时候的选项
+
+int Kicking(int conn_fd,char *count)//第二个参数为群号
+{
+    char buf;
+    list_member_t curps;
+    recv_t package;
+    package.type=KICKING;
+    char account[MAX_ACCOUNT];
+    printf("please enter who you want to kicking:");
+    scanf("%s",account);
+    getchar();
+    List_ForEach(member[mp_group[atoi(count)]],curps)
+    {
+        if(!strcmp(curps->account,account))
+        {
+            List_DelNode(curps); //本地群列表中删除
+            break;
+        }
+    }
+    strcpy(package.message,account);//要踢出的人
+    strcpy(package.message_tmp,count);//群号
+    if(send(conn_fd,&package,sizeof(recv_t),0)<0)
+    perror("error in send kicking\n");
+    return 0;
 }

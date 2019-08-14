@@ -26,6 +26,9 @@
 #define PASSWORD            1
 #define BOX_NO_MESSAGES    "@@@@@@@@@@@@@"
 #define BOX_HAVE_MESSAGS   "$$$$$$$$$$$$$"
+#define OWNER               1       //群主
+#define ADMIN               2       //管理员
+#define COMMON              3       //群员
 /*-----------------------------------------------*/
 #define EOF_OF_BOX          -1      //发包结束符
 #define LOGIN               0       //登录请求
@@ -36,6 +39,12 @@
 #define DEL_FRIENDS         5       //删除好友
 #define LIST_FRIENDS        6       //显示好友列表
 #define SEND_MESSAGES       7       //单聊　发送信息
+#define REGISTER_GROUP      8       //注册群
+#define ADD_GROUP           9       //加入群
+#define QUIT                10      //退出群
+#define DISSOLVE            11      //解散群
+#define SET_ADMIN           12      //设置管理员
+#define KICKING             13      //踢人
 
 
 /*-----------------------------------------------*/
@@ -82,6 +91,34 @@ typedef struct friend_node//好友链表类型
     struct friend_node *prev;
     //不需要加套接字　在服务器会进行查询
 }node_friend_t,*list_friend_t;
+
+
+typedef struct group_node //群链表
+{
+	char nickname[MAX_USERNAME];//群名称
+	char account[MAX_ACCOUNT];//群账号
+	struct group_node *next;
+	struct group_node *prev;
+}node_group_t,*list_group_t;
+
+typedef struct member_node//群成员链表
+{
+	char nickname[MAX_USERNAME]; //昵称
+	char account[MAX_ACCOUNT];   //账号
+	int type;                    //标记位
+	struct member_node *next;
+	struct member_node *prev;
+}node_member_t,*list_member_t;
+
+typedef struct group_messages_node//群消息链表
+{
+	char nickname[MAX_USERNAME]; //昵称
+	char account[MAX_ACCOUNT];   //账号
+	char messages[MAX_RECV];     //消息内容
+	int type;                    //标记位
+	struct group_messages_node *next;
+	struct group_messages_node *prev;
+}node_group_messages_t,*list_group_messages_t;
 
 
 typedef struct status_node //在服务器使用
@@ -168,12 +205,14 @@ typedef struct status_node //在服务器使用
 	    )
 
 
+
+//分页器
 typedef struct
 {
-	int totalRecords;	//�ܼ�¼��
-	int offset;			//��ǰҳ��ʼ��¼����ڵ�һ����¼��ƫ�Ƽ�¼��
-	int pageSize;		//ҳ���С
-	void *curPos;		//��ǰҳ��ʼ��¼�������еĽ���ַ
+	int totalRecords;
+	int offset;
+	int pageSize;	
+	void *curPos;		
 }Pagination_t;
 
 #define List_Paging(list, paging, list_node_t) {			\
@@ -238,16 +277,12 @@ typedef struct
 	}														\
 }
 
-//���ݷ�ҳ��paging���㵱ǰ��ҳ��
 #define Pageing_CurPage(paging) 	(0==(paging).totalRecords?0:1+(paging).offset/(paging).pageSize)
 
-//���ݷ�ҳ��paging������ܵ�ҳ��
 #define Pageing_TotalPages(paging)	(((paging).totalRecords%(paging).pageSize==0)?\
 	(paging).totalRecords/(paging).pageSize:\
 	(paging).totalRecords/(paging).pageSize+1)
 
-//����paging�жϵ�ǰҳ���Ƿ�Ϊ��һҳ�����Ϊtrue��ʾ�ǣ�����false
 #define Pageing_IsFirstPage(paging) (Pageing_CurPage(paging)<=1)
 
-//����paging�жϵ�ǰҳ���Ƿ�Ϊ���һҳ�����Ϊtrue��ʾ�ǣ�����false
 #define Pageing_IsLastPage(paging) 	(Pageing_CurPage(paging)>=Pageing_TotalPages(paging))
