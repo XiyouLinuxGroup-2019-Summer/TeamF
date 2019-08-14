@@ -147,11 +147,10 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         strcpy(box.account,rowwor[2]); //必须保证是好友账号
         else 
         strcpy(box.account,rowwor[1]); 
-        printf("%s\n",box.account);
+        //printf("%s\n",box.account);
         strcpy(box.usename,rowwor_tmp[3]);//发送者昵称
-        printf("%s\n",rowwor_tmp[3]);
+        //printf("%s\n",rowwor_tmp[3]);
         box.type=SEND_MESSAGES; //消息类型
-        printf("333\n");
         mysql_free_result(resu_tmp);
         if(send(sock->send_fd,&box,sizeof(box),0)<0)
         perror("error in send a message when logging in\n");

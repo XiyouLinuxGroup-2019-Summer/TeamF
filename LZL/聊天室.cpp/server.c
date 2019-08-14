@@ -88,6 +88,7 @@ int main()
 
                 conn_fd=accept(events[i].data.fd,(struct sokcaddr*)&cli_addr,&cli_len);
                 //网络字节序转换成字符串输出
+
                 printf("accept a new client ! ip:%s\n",inet_ntoa(cli_addr.sin_addr));
 
                 if(conn_fd<=0)
@@ -119,8 +120,13 @@ int main()
                 {       //对端关闭会发送一个可读事件　但包的大小为一
                     //这个处理限定了一个ＩＰ只能登录一个账号
                     list_status_t curps;
+                    char buf_tmp[256];
                     List_ForEach(status_per,curps){
+                        printf("一次n");
                         if(curps->fdd==events[i].data.fd){
+                            sprintf(buf_tmp,"update Data set status = '0' where Account = '%s'",curps->account);
+                            printf("%s\n",buf_tmp);
+                            mysql_query(&mysql,buf_tmp); //改变登录状态
                             List_DelNode(curps); //不正常退出修改状态信息
                             break;
                         }
@@ -138,11 +144,14 @@ int main()
                     continue;  
                 }
 
-                list_status_t tmp=(list_status_t)malloc(sizeof(node_friend_t));
-                tmp->fdd=events[i].data.fd;
-                strcpy(tmp->account,recv_buf.send_Account);
-                list_add(status_per,tmp); //加入在线者链表
-
+                if(recv_buf.type==LOGIN)
+                {
+                    list_status_t tmp=(list_status_t)malloc(sizeof(node_friend_t));
+                    tmp->fdd=events[i].data.fd;//发送者套接字
+                    strcpy(tmp->account,recv_buf.send_Account); //连接者账号　//用来在删除时找到账号修改状态
+                    List_AddTail(status_per,tmp); //加入在线者链表
+                    list_status_t ddd;
+                }
                 recv_buf.send_fd = events[i].data.fd; //发送者的套接字已经改变 应转换为accept后的套接字
                 recv_t *temp=(recv_t*)malloc(sizeof(recv_t)); //防止多线程访问一个结构体
                 *temp=recv_buf;
