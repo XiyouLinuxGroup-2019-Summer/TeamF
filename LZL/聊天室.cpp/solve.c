@@ -11,6 +11,7 @@
 #include<stdio.h>
 #include<mysql/mysql.h>
 #include"Data.h"
+list_status_t status_per;
 
 void send_data(int conn_fd,const char *string) //传入一个连接套接字和字符串数据   
 {
@@ -345,7 +346,21 @@ int send_messages_server(recv_t *sock,MYSQL *mysql)
         strcpy(package.message_tmp,row[3]);
         strcpy(package.message,sock->message);
         package.type=SEND_MESSAGES;
-        if(send(atoi(row[5]),&package,sizeof(recv_t),0)<0) 
+
+        int flag=0;
+        list_status_t curps;
+        List_ForEach(status_per,curps)
+        {
+            printf("%s %s\n",sock->recv_Acount,curps->account);
+            if(!strcmp(sock->recv_Acount,curps->account))
+            {
+                printf("daodai!\n");
+                flag=curps->fdd;//在在线链表中寻找套接字
+                break;
+            }
+        }
+
+        if(send(flag,&package,sizeof(recv_t),0)<0) 
         {
             perror("error in server send friend message\n");
         }
@@ -384,7 +399,8 @@ int register_group_server(recv_t *sock,MYSQL *mysql)
     account,sock->send_Account,sock->message,OWNER);//把这个群存入数据库
     mysql_query(mysql,buf);
 
-    if(send(sock->send_fd,account,sizeof(account),0)<0)
+    strcpy(packet.send_Account,account);
+    if(send(sock->send_fd,&packet,sizeof(recv_t),0)<0)
     perror("error in register group !\n");
 }
 
@@ -402,8 +418,9 @@ int Add_group_server(recv_t *sock,MYSQL *mysql)
     mysql_query(mysql,"select *from group_list");
     MYSQL_RES *result = mysql_store_result(mysql);
     MYSQL_ROW row=mysql_fetch_row(result);
-    strcpy(buf,row[2]);
-    if(send(sock->send_fd,buf,sizeof(buf),0)<0) //发送群名称
+    strcpy(packet.message,row[2]);
+    packet.type=ADD_GROUP;
+    if(send(sock->send_fd,&packet,sizeof(recv_t),0)<0) //发送群名称
     perror("error in send!(add group server)\n");
 
     return 1;

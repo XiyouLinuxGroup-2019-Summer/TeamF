@@ -6,7 +6,7 @@
 
 #define IP                 (127.0.0.1)       //本地ip
 
-#define MESSADES_PAGE_SIZE 10     //好友消息分页最大数
+#define MESSADES_PAGE_SIZE 15     //好友消息分页最大数
 #define FRIEND_PAGE_SIZE   5      //好友列表分页最大数
 #define EVENTS_MAX_SIZE    1024   //epoll接收事件最大数 
 #define MAX_CONTECT_SIZE   1024   //服务器最大连接数

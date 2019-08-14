@@ -535,13 +535,13 @@ int Chat(char *account)//参数为好友账号
                 case 'p':
                 case 'P':
                     if (!Pageing_IsFirstPage(paging)) {
-                        Paging_Locate_OffsetPage(head, paging, -1, node_friend_t);
+                        Paging_Locate_OffsetPage(Messages[mp[atoi(acc_tmp)]], paging, -1, node_messages_t);
                     }
                     break;
                 case 'n':
                 case 'N':
                     if (!Pageing_IsLastPage(paging)) {
-                        Paging_Locate_OffsetPage(head, paging, 1, node_friend_t);
+                        Paging_Locate_OffsetPage(Messages[mp[atoi(acc_tmp)]], paging, 1, node_messages_t);
                     }
                     break;
                 case 'r':
@@ -553,27 +553,6 @@ int Chat(char *account)//参数为好友账号
         } 
 }
 
-
-
-//可以把在登录以后收到的信息包装成一个消息盒子 
-//好友请求　好友消息　群聊消息
-//在其中处理所有的请求　建立一个消息盒子链表　存储所有数据包　根据其中标记位来辨别请求类型
-void *method_client(void *arg)                       
-{
-    recv_t buf;
-    while(1)
-    {
-        if(recv(fact_fd,&buf,sizeof(recv_t),0)<0)
-        perror("error in recv\n");
-        list_messages_t temp = (list_messages_t)malloc(sizeof(node_messages_t));
-        temp->type=buf.type;//标记位　
-        strcpy(temp->send_account,buf.send_Account);//发送者
-        strcpy(temp->messages,buf.message);//消息
-        strcpy(temp->nickname,buf.message_tmp);//昵称
-        strcpy(temp->recv_account,buf.recv_Acount);//就是本人账号
-        List_AddTail(Message_BOX,temp);
-    }
-}
 
 
 int show_friend_list()//套接字为全局变量
@@ -670,10 +649,20 @@ int register_group_client(int conn_fd)
         perror("error in register send\n");
         return 0;
     }
-    if((ret=my_recv(conn_fd,account,MAX_ACCOUNT))<0) //接收账号　在服务器存入数据库
+/*     if((ret=my_recv(conn_fd,account,MAX_ACCOUNT))<0) //接收账号　在服务器存入数据库
     {
         perror("error in register send\n");
         return 0;
+    } */
+    list_messages_t tttt;
+    List_ForEach(Message_BOX,tttt)
+    {
+        if(tttt->type==REGISTER_GROUP)
+        {
+            strcpy(account,tttt->send_account);//参数为提前定制
+            List_DelNode(tttt); //从消息盒子中获取
+            break;
+        }
     }
     if(account[0]==ERROR_IN_LOGIN)//这个标记位可以标记所有的错误事件
     {
@@ -728,8 +717,20 @@ int Add_group(int conn_fd)
     }
     else printf("You have joined this group:%s\n",Account);
     getchar();
-    if(recv(conn_fd,buf,sizeof(buf),0)<0) //返回一个名称
-    perror("error in recv\n");
+    
+/*     if(recv(conn_fd,buf,sizeof(buf),0)<0) //返回一个名称
+    perror("error in recv\n"); */
+
+    list_messages_t tttt;
+    List_ForEach(Message_BOX,tttt)
+    {
+        if(tttt->type==REGISTER_GROUP)
+        {
+            strcpy(buf,tttt->messages);//参数为提前定制
+            List_DelNode(tttt); //从消息盒子中获取
+            break;
+        }
+    }
 
     list_group_t tmp=(list_group_t)malloc(sizeof(node_group_t));
     strcpy(tmp->account,Account);
@@ -756,7 +757,7 @@ int Quit_group(int conn_fd)
     char buf[MAX_USERNAME];
     //system("clear");
     getchar();
-    printf("Please enter a Group_Account you want to quit:");
+    printf("Please enter a Group_Account you want to quit:\n");
     get_userinfo(Account,MAX_ACCOUNT);
     strcpy(Package.message,Account); //要删除的账号
 
@@ -817,7 +818,7 @@ int Set_Admin(int conn_fd,char * count) //后一个参数为当前群号
     memset(&package,0,sizeof(package));
     int flag=0;
     List_ForEach(member[mp_group[atoi(count)]],curps){
-        if(!strcpy(gl_account,curps->account) && curps->type==OWNER){
+        if(!strcmp(gl_account,curps->account) && curps->type==OWNER){
             flag=1;
             break;
         }
@@ -835,7 +836,7 @@ int Set_Admin(int conn_fd,char * count) //后一个参数为当前群号
         if(send(conn_fd,&package,sizeof(recv_t),0)<0)//在服务器修改这个账号的状态
         perror("error in send!\n");
         List_ForEach(member[mp_group[atoi(count)]],curps){
-            if(!strcpy(account,curps->account)){
+            if(!strcmp(account,curps->account)){
                 curps->type=ADMIN;//在本地设置为管理员
                 break;
             }
@@ -868,4 +869,26 @@ int Kicking(int conn_fd,char *count)//第二个参数为群号
     if(send(conn_fd,&package,sizeof(recv_t),0)<0)
     perror("error in send kicking\n");
     return 0;
+}
+
+
+//可以把在登录以后收到的信息包装成一个消息盒子 
+//好友请求　好友消息　群聊消息
+//在其中处理所有的请求　建立一个消息盒子链表　存储所有数据包　根据其中标记位来辨别请求类型
+void *method_client(void *arg)                       
+{
+    recv_t buf;
+    while(1)
+    {
+        if(recv(fact_fd,&buf,sizeof(recv_t),0)<0)
+        perror("error in recv\n");
+        printf("消息盒子收到消息　%d %s\n",buf.type,buf.message);
+        list_messages_t temp = (list_messages_t)malloc(sizeof(node_messages_t));
+        temp->type=buf.type;//标记位　
+        strcpy(temp->send_account,buf.send_Account);//发送者
+        strcpy(temp->messages,buf.message);//消息
+        strcpy(temp->nickname,buf.message_tmp);//昵称
+        strcpy(temp->recv_account,buf.recv_Acount);//就是本人账号
+        List_AddTail(Message_BOX,temp);
+    }
 }

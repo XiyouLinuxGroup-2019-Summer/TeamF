@@ -15,7 +15,6 @@
 
 int main()
 {
-    list_status_t status_per;
     List_Init(status_per,node_status_t);
     MYSQL mysql;
     mysql_init(&mysql);  //初始化一个句柄 
@@ -148,9 +147,9 @@ int main()
                 {
                     list_status_t tmp=(list_status_t)malloc(sizeof(node_friend_t));
                     tmp->fdd=events[i].data.fd;//发送者套接字
+                    printf("套接字%d\n",events[i].data.fd);
                     strcpy(tmp->account,recv_buf.send_Account); //连接者账号　//用来在删除时找到账号修改状态
                     List_AddTail(status_per,tmp); //加入在线者链表
-                    list_status_t ddd;
                 }
                 recv_buf.send_fd = events[i].data.fd; //发送者的套接字已经改变 应转换为accept后的套接字
                 recv_t *temp=(recv_t*)malloc(sizeof(recv_t)); //防止多线程访问一个结构体
