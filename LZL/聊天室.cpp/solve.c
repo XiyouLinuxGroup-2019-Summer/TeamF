@@ -15,11 +15,14 @@ list_status_t status_per;
 
 void send_data(int conn_fd,const char *string) //传入一个连接套接字和字符串数据   
 {
-    if(send(conn_fd,string,strlen(string),0)<0)
+    int ree=0;
+    printf("%s\n",string);
+    if((ree=send(conn_fd,string,strlen(string),0))<0)
     {
         perror("send");
         exit(1);
     }
+    printf("返回值%d\n",ree);
 }
 
 void Delete_for_friend_third(char *a,char *b,char *c) //为了和并出一个唯一的字符串删除好友关系
@@ -68,17 +71,21 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         //两种情况分情况编写代码 因为发信息不知道什么时候结束　只能在结束时发送一个代表消息结束的包
         if((row_in_messages_box=mysql_num_rows(res))==0)
         {
+            printf("已发送1！\n");
             send_data(sock->send_fd,BOX_NO_MESSAGES);
         }else
         {
+            printf("已发送2！\n");
             send_data(sock->send_fd,BOX_HAVE_MESSAGS);
         }
         //printf("标志消息盒子　是否有数据的包发送成功  %d\n",row_in_messages_box);
         //开始发送消息
         Box_t box;
+        memset(&box,0,sizeof(Box_t));
         //printf("%d\n",row_in_messages_box);
         int flag=0;
         if(row_in_messages_box==0) flag=1;
+        printf("row_in_messasd %d\n",row_in_messages_box);
         while(row_in_messages_box--)
         {
 
@@ -132,8 +139,10 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     {
         send_data(sock->send_fd,BOX_HAVE_MESSAGS);
     }
+    printf("row_in %d\n",row_in_messages_record);
     while(row_in_messages_record--)
     {
+        bzero(&box,sizeof(Box_t));
         rowwor=mysql_fetch_row(resu); //获取消息信息
         //printf("%s %s\n",sock->send_Account,rowwor[1]);
 /*         if(!strcmp(sock->send_Account,rowwor[1])) //查找到与之聊天的好友的正确账号　//为查询昵称
@@ -153,13 +162,81 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         //printf("%s\n",rowwor_tmp[3]);
         box.type=SEND_MESSAGES; //消息类型
         mysql_free_result(resu_tmp);
-        if(send(sock->send_fd,&box,sizeof(box),0)<0)
+        if(send(sock->send_fd,&box,sizeof(Box_t),0)<0)
         perror("error in send a message when logging in\n");
 
     }
     box.type=EOF_OF_BOX;
-    if(send(sock->send_fd,&box,sizeof(box),0)<0) //发送一个结束包
+    if(send(sock->send_fd,&box,sizeof(Box_t),0)<0) //发送一个结束包
     perror("error in send a message when logging in\n");
+
+
+
+
+    //从这里开始发送群记录和群消息
+    int ddd=0;
+    recv_t tmp_tmp;     //客户端用一个while接收
+    bzero(&tmp_tmp,sizeof(recv_t));
+    bzero(buf,sizeof(buf));
+    sprintf(buf,"select *from group_list where member_account = '%s'",sock->send_Account);
+    mysql_query(mysql,buf);
+    MYSQL_RES *res_tmp=mysql_store_result(mysql);
+    MYSQL_ROW rowwo;
+    if((ddd=mysql_num_rows(res_tmp))==0) //群为零　也就不用发送消息记录了
+    {
+        tmp_tmp.type=EOF_OF_BOX;//直接发送标记符
+        send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0); //客户端是一个while循环接收,所以一个足够
+        return 0;
+    }else{
+        while(ddd--) //ddd为所有的群的总数
+        {
+            int ret=0;
+            rowwo=mysql_fetch_row(res_tmp);
+            bzero(&tmp_tmp,sizeof(recv_t));
+            strcpy(tmp_tmp.message,row[0]);//所有包含本用户的群
+            strcpy(tmp_tmp.message_tmp,row[2]);
+            tmp_tmp.type=atoi(row[3]);
+            if((ret==send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0)<0))
+            {
+                perror("error in send group\n");
+            }
+        }
+        bzero(&tmp_tmp,sizeof(recv_t)); //发送一个结束包
+        tmp_tmp.type=EOF_OF_BOX;
+        if((ret==send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0)<0))
+        {
+            perror("error in send group\n");
+        }
+    }
+    mysql_free_result(res_tmp);
+
+    //开始发送消息
+    sprintf(buf,"select *from group_messsges_list",sock->send_Account);
+    mysql_query(mysql,buf);
+    res_tmp=mysql_store_result(mysql);
+    int fff=mysql_num_rows(res_tmp); //获取所有消息　发送给客户端
+    while(fff--)
+    {
+        //在客户端在接收的时候根据
+        bzero(&tmp_tmp,sizeof(recv_t));
+        rowwo=mysql_fetch_row(res_tmp);
+        strcpy(tmp_tmp.message,row[2]);//群名
+        strcpy(tmp_tmp.message_tmp,row[3]);//消息
+        strcpy(tmp_tmp.recv_Acount,row[0]);//群账号
+        strcpy(tmp_tmp.send_Account,row[1]);//好友账号
+        tmp_tmp.type=atoi(row[4]);//好友的等级　群主　管理员
+        if(send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0)<0)
+        {
+            perror("error in send\n");
+        }
+    }
+    bzero(&tmp_tmp,sizeof(recv_t)); //发一个结束包
+    tmp_tmp.type=EOF_OF_BOX;
+    if(send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0)<0)
+    {
+        perror("error in send\n");
+    }
+    return 0;
 }
 
 int register_server(recv_t * sock,MYSQL *mysql)
@@ -305,7 +382,7 @@ int List_friends_server(recv_t *sock,MYSQL *mysql) //因为数据库表建的不
     while(number--)//第二遍搜索的好友总数
     {
         row=mysql_fetch_row(result);
-
+        bzero(&packet,sizeof(recv_t));
         sprintf(buf,"select *from Data where Account = '%s'",row[0]);//每一个好友的信息
         mysql_query(mysql,buf);
         res=mysql_store_result(mysql);
@@ -318,6 +395,8 @@ int List_friends_server(recv_t *sock,MYSQL *mysql) //因为数据库表建的不
         perror("error in list_friend send\n");
         //printf("hello!\n");
     }
+    
+    bzero(&packet,sizeof(recv_t));
     packet.type=EOF_OF_BOX;//好友消息的结束包
     if((send(sock->send_fd,&packet,sizeof(recv_t),0))<0)
     perror("error in EOF list_friend\n");

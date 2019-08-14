@@ -221,10 +221,11 @@ int login_client(int conn_fd,char *username)
         Box_t box;
         while(1)
         {
-            if(recv(conn_fd,&box,sizeof(box),0)<0)
+            if(recv(conn_fd,&box,sizeof(Box_t),0)<0)
             perror("error in recv\n");
 /*             printf("%s\n",box.message);
             getchar(); */
+            printf("%s %d\n",box.message,box.account);
             if(box.type==EOF_OF_BOX) //接收到结束包会退出
             break;
             if(box.type==SEND_MESSAGES)//顺序为　链表前为老信息　链表后为新信息
@@ -245,6 +246,23 @@ int login_client(int conn_fd,char *username)
             }
         }
     }
+
+    //在这里开始接收群消息
+    recv_t tmp;
+    bzero(&tmp,sizeof(recv_t)); //接收到的消息要加入两个链表　从这里开始
+    while(1)
+    {
+        if(recv(conn_fd,&tmp,sizeof(recv_t),0)<0)
+        perror("error in recv\n");
+        if(tmp.type==EOF_OF_BOX)
+        break;
+        group_head;
+        list_group_t cur=(list_group_t)malloc(sizeof(node_group_t));
+        strcpy(cur->account,tmp.message);//群号
+        strcpy(cur->nickname,tmp.message_tmp);//群昵称
+        List_AddTail(group_head,cur);
+    }
+
     return 1;  //登陆成功　进入服务界面
 }
 

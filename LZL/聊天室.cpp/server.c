@@ -109,7 +109,7 @@ int main()
             }
             else if(events[i].events & EPOLLIN )  //接收到可读 且不是服务器套接字　不用判断　上面已判断 
             {
-                if((ret=recv(events[i].data.fd,&recv_buf,sizeof(recv_buf),0))<0) //接收
+                if((ret=recv(events[i].data.fd,&recv_buf,sizeof(recv_buf),MSG_WAITALL))<0) //接收
                 //包的格式已经提前制定好
                 {
                     perror("recv\n");
