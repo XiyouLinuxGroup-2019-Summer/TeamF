@@ -17,7 +17,7 @@ int  fact_fd;          //记录服务器套接字
 char fact_name[MAX_USERNAME];
 int tt=1;  //更新映射表主键
 list_friend_t head;//存储一次登录的好友信息
-map<char*,int>mp; //主键为账号　键值为头指针
+map<int,int>mp; //主键为账号　键值为头指针
 
 list_messages_t Messages[1024]; //与每一个好友的消息链表
 
@@ -217,21 +217,25 @@ int login_client(int conn_fd,char *username)
         {
             if(recv(conn_fd,&box,sizeof(box),0)<0)
             perror("error in recv\n");
+/*             printf("%s\n",box.message);
+            getchar(); */
             if(box.type==EOF_OF_BOX) //接收到结束包会退出
             break;
             if(box.type==SEND_MESSAGES)//顺序为　链表前为老信息　链表后为新信息
             {
-                if(!mp[box.account])//表中值为零说明第一次
+                if(!mp[atoi(box.account)])//表中值为零说明第一次
                 {
-                    mp[box.account]=tt++; //对应唯一二维数组的索引
-                    List_Init(Messages[mp[box.account]],node_messages_t);
+                    mp[atoi(box.account)]=tt++; //对应唯一二维数组的索引
+/*                     printf("%d %s %d\n",strlen(box.account),box.account,tt-1);
+                    getchar(); */
+                    List_Init(Messages[mp[atoi(box.account)]],node_messages_t);
                 }
                 list_messages_t temp=(list_messages_t)malloc(sizeof(node_messages_t)); //销毁链表
                 strcpy(temp->messages,box.message);
                 strcpy(temp->send_account,box.account);//好友账号
                 strcpy(temp->nickname,box.usename); //username 必为好友本人的
                 temp->type=box.type;
-                List_AddTail(Messages[mp[box.account]],temp);//将消息加入链表
+                List_AddTail(Messages[mp[atoi(box.account)]],temp);//将消息加入链表
             }
         }
     }
@@ -422,24 +426,26 @@ int Chat(char *account)//参数为好友账号
     char Message[MAX_RECV];
     Pagination_t paging;
     node_messages_t *pos;
+    char acc_tmp[MAX_ACCOUNT];
+    strcpy(acc_tmp,account);
     int i;
     char choice;
     int flag=0;
     list_messages_t curos;
     paging.totalRecords=0;
-    if(Messages[mp[account]]==NULL) //说明没有消息　链表还未初始化
+    if(Messages[mp[atoi(account)]]==NULL) //说明没有消息　链表还未初始化
     {
         printf("初始化\n");
-        mp[account]=++tt;
-        List_Init(Messages[mp[account]],node_messages_t);
+        mp[atoi(account)]=++tt;
+        List_Init(Messages[mp[atoi(account)]],node_messages_t);
     }
-    List_ForEach(Messages[mp[account]],curos) paging.totalRecords++;
+    List_ForEach(Messages[mp[atoi(account)]],curos) paging.totalRecords++;
     //遍历消息链表
 	paging.offset = paging.totalRecords;
 	paging.pageSize = MESSADES_PAGE_SIZE;
 
             while(1){
-            Paging_Locate_FirstPage(Messages[mp[account]], paging);
+            Paging_Locate_FirstPage(Messages[mp[atoi(account)]], paging);
             system("clear");
             printf("链表长度：%d\n",paging.totalRecords);
 
@@ -453,12 +459,12 @@ int Chat(char *account)//参数为好友账号
                     strcpy(temp->messages,curos->messages);
                     strcpy(temp->recv_account,curos->recv_account);
                     strcpy(temp->nickname,curos->nickname);
-                    List_AddTail(Messages[mp[account]],temp);
+                    List_AddTail(Messages[mp[atoi(account)]],temp);
                     paging.totalRecords+=1;//更新消息链表
                     List_FreeNode(curos); //这个消息已经载入消息链表　可以删除了
                 }
             }
-            List_ForEach(Messages[mp[account]],curos)
+            List_ForEach(Messages[mp[atoi(account)]],curos)
             {
                 cout << curos->messages << endl;
             }
@@ -470,15 +476,17 @@ int Chat(char *account)//参数为好友账号
                                //没有消息不就凉了
             printf(
                     "------------------------------------------------------------------\n");
-            Paging_ViewPage_ForEach(Messages[mp[account]], paging, node_messages_t, pos, i){
+                    //printf("((((%d,%s,%d\n",mp[atoi(acc_tmp)],acc_tmp,strlen(acc_tmp));
+            Paging_ViewPage_ForEach(Messages[mp[atoi(acc_tmp)]], paging, node_messages_t, pos, i){
                 //链表中名称必为好友昵称
-                if(!strcmp(pos->nickname,fact_name))//怎么比都可以
+                //printf("%s :%s :\n",pos->nickname,fact_name);
+                if(strcmp(pos->nickname,fact_name))//怎么比都可以
                 {
-                    printf("%65s\n",pos->nickname);
-                    printf("%65s\n",pos->messages);
-                }else{
-                    printf("%-65s\n",fact_name);
+                    printf("%-65s\n",pos->nickname);
                     printf("%-65s\n",pos->messages);
+                }else{
+                    printf("%65s\n",fact_name);
+                    printf("%65s\n",pos->messages);
                 }
                 putchar('\n');
             }
@@ -509,11 +517,11 @@ int Chat(char *account)//参数为好友账号
                     list_messages_t temp=(list_messages_t)malloc(sizeof(node_messages_t));
                     strcpy(temp->messages,Message);
                     strcpy(temp->send_account,gl_account);
-                    strcpy(temp->nickname,fact_name);
+                    strcpy(temp->nickname,fact_name);//随便即可　只要不和自己的名字重合
                     strcpy(temp->recv_account,account);
 /*                     if(mp[account]==0)
                     mp[account]=++tt; */
-                    List_AddTail(Messages[mp[account]],temp);//加入到消息链表
+                    List_AddTail(Messages[mp[atoi(account)]],temp);//加入到消息链表
                     paging.totalRecords++;
                     send_friend_messages(account,Message);
                 }

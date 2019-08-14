@@ -84,6 +84,15 @@ typedef struct friend_node//好友链表类型
 }node_friend_t,*list_friend_t;
 
 
+typedef struct status_node //在服务器使用
+{
+	int status;
+	char account[MAX_ACCOUNT];
+	int fdd; //用来判断是否在线
+	struct status_node *next;
+	struct status_node *prev;
+}node_status_t,*list_status_t;
+
 //包含分页器与链表操作
 #define List_Init(list, list_node_t) {					\
 		list=(list_node_t*)malloc(sizeof(list_node_t)); \

@@ -15,6 +15,8 @@
 
 int main()
 {
+    list_status_t status_per;
+    List_Init(status_per,node_status_t);
     MYSQL mysql;
     mysql_init(&mysql);  //初始化一个句柄 
     mysql_library_init(0,NULL,NULL);//初始化数据库
@@ -116,6 +118,13 @@ int main()
                 if(!ret)//防止客户端异常退出时无法改变状态 客户端异常时会先发送一个大小为零的包
                 {       //对端关闭会发送一个可读事件　但包的大小为一
                     //这个处理限定了一个ＩＰ只能登录一个账号
+                    list_status_t curps;
+                    List_ForEach(status_per,curps){
+                        if(curps->fdd==events[i].data.fd){
+                            List_DelNode(curps); //不正常退出修改状态信息
+                            break;
+                        }
+                    }
                     char buf[128];
                     printf("The client with IP %d is disconnected\n",events[i].data.fd);
                     sprintf(buf,"select *from Data where send_recv_fd = %d",events[i].data.fd);
@@ -128,6 +137,12 @@ int main()
                     mysql_free_result(result);
                     continue;  
                 }
+
+                list_status_t tmp=(list_status_t)malloc(sizeof(node_friend_t));
+                tmp->fdd=events[i].data.fd;
+                strcpy(tmp->account,recv_buf.send_Account);
+                list_add(status_per,tmp); //加入在线者链表
+
                 recv_buf.send_fd = events[i].data.fd; //发送者的套接字已经改变 应转换为accept后的套接字
                 recv_t *temp=(recv_t*)malloc(sizeof(recv_t)); //防止多线程访问一个结构体
                 *temp=recv_buf;

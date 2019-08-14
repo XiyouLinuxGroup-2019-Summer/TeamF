@@ -116,8 +116,9 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     //根据登陆者的账号在数据库中进行匹配
     sprintf(buf,"select *from messages_record where ower_account = '%s'",sock->send_Account);
     mysql_query(mysql,buf);
-    MYSQL_RES *resu = mysql_store_result(mysql);
-    MYSQL_ROW rowwor=mysql_fetch_row(resu);
+    MYSQL_RES *resu=mysql_store_result(mysql);
+    MYSQL_ROW rowwor;
+    //rowwor=mysql_fetch_row(resu);
     int row_in_messages_record;
     Box_t box;
     //根据数据库中有无登录者消息记录　先发送一个起始包　
@@ -133,23 +134,25 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     while(row_in_messages_record--)
     {
         rowwor=mysql_fetch_row(resu); //获取消息信息
-
-        if(!strcmp(sock->send_Account,rowwor[1])) //查找到与之聊天的好友的正确账号　//为查询昵称
+        //printf("%s %s\n",sock->send_Account,rowwor[1]);
+/*         if(!strcmp(sock->send_Account,rowwor[1])) //查找到与之聊天的好友的正确账号　//为查询昵称
         sprintf(buf,"select *from Data where Account = '%s'",rowwor[2]);
-        else 
+        else  */ 
         sprintf(buf,"select *from Data where Account = '%s'",rowwor[1]);
         mysql_query(mysql,buf);
         MYSQL_RES *resu_tmp = mysql_store_result(mysql);
         MYSQL_ROW rowwor_tmp=mysql_fetch_row(resu_tmp);
-    
         strcpy(box.message,rowwor[3]); //消息
         if(!strcmp(rowwor[1],sock->send_Account))
         strcpy(box.account,rowwor[2]); //必须保证是好友账号
         else 
-        strcpy(box.account,rowwor[1]);
+        strcpy(box.account,rowwor[1]); 
+        printf("%s\n",box.account);
         strcpy(box.usename,rowwor_tmp[3]);//发送者昵称
+        printf("%s\n",rowwor_tmp[3]);
         box.type=SEND_MESSAGES; //消息类型
-        mysql_free_result(rowwor_tmp);
+        printf("333\n");
+        mysql_free_result(resu_tmp);
         if(send(sock->send_fd,&box,sizeof(box),0)<0)
         perror("error in send a message when logging in\n");
 
@@ -352,7 +355,7 @@ int send_messages_server(recv_t *sock,MYSQL *mysql)
     mysql_free_result(result);
     
     sprintf(buf,"insert into messages_record values('%s','%s','%s','%s')",
-    sock->send_Account,sock->recv_Acount,sock->recv_Acount,sock->message);
+    sock->send_Account,sock->send_Account,sock->recv_Acount,sock->message);
     printf("%s\n",buf);
     mysql_query(mysql,buf);
 
