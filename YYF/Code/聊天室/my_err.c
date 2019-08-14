@@ -1,13 +1,14 @@
-#define MY_ERR_C
+#define _MY_ERR_C
 
-#include <stdio.h>
+#include "my_err.h"
+
 #include <stdlib.h>
-#include <errno.h>
-#include <string.h>
+#include <stdio.h>
 
-void my_err(char *err_string , int line)
-{
-	fprintf(stdout,"line:%d",line);
-	perror(err_string);
-	exit(1);
+void my_err(char *err_string , int line) {
+    fprintf(stdout,"line:%d",line);
+    perror(err_string);
+    exit(1);
 }
+
+
