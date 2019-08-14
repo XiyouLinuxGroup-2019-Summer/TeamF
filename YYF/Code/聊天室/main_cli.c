@@ -659,7 +659,7 @@ void *thread_read(void *sock_fd) {
                         getchar();
                         break;
                     }
-            case 19:
+           /* case 19:
                     {
                         struct stat buf;
                         send_pack->type = SEND_FILE;
@@ -677,7 +677,7 @@ void *thread_read(void *sock_fd) {
                             my_err("send", __LINE__);
                         }
                         break;
-                    }
+                    }*/
             case 20:
                     {
                         printf("请输入你要查看的好友:\n");
@@ -1092,7 +1092,7 @@ void *thread_write(void *sock_fd) {
                         pthread_mutex_unlock(&mutex_cli);
                         break;
                     }
-            case SEND_FMES:
+            /* case SEND_FMES:
                     {
                         memset(send_pack->data.write_buff, 0, sizeof(send_pack->data.write_buff));
                         strcpy(send_pack->data.write_buff, recv_pack->data.write_buff);
@@ -1100,7 +1100,7 @@ void *thread_write(void *sock_fd) {
                         pthread_cond_signal(&cond_cli);
                         pthread_mutex_unlock(&mutex_cli);
                         break;
-                    }
+                    } */
             case SEND_GMES:
                     {
                         memset(send_pack->data.write_buff, 0, sizeof(send_pack->data.write_buff));
