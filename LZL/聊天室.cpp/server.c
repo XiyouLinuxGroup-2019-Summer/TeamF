@@ -109,7 +109,7 @@ int main()
             }
             else if(events[i].events & EPOLLIN )  //接收到可读 且不是服务器套接字　不用判断　上面已判断 
             {
-                if((ret=recv(events[i].data.fd,&recv_buf,sizeof(recv_buf),0))<0) //接收
+                if((ret=recv(events[i].data.fd,&recv_buf,sizeof(recv_buf),MSG_WAITALL))<0) //接收
                 //包的格式已经提前制定好
                 {
                     perror("recv\n");
@@ -150,6 +150,7 @@ int main()
                     printf("套接字%d\n",events[i].data.fd);
                     strcpy(tmp->account,recv_buf.send_Account); //连接者账号　//用来在删除时找到账号修改状态
                     List_AddTail(status_per,tmp); //加入在线者链表
+
                 }
                 recv_buf.send_fd = events[i].data.fd; //发送者的套接字已经改变 应转换为accept后的套接字
                 recv_t *temp=(recv_t*)malloc(sizeof(recv_t)); //防止多线程访问一个结构体

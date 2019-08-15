@@ -221,10 +221,11 @@ int login_client(int conn_fd,char *username)
         Box_t box;
         while(1)
         {
-            if(recv(conn_fd,&box,sizeof(box),0)<0)
+            if(recv(conn_fd,&box,sizeof(Box_t),0)<0)
             perror("error in recv\n");
 /*             printf("%s\n",box.message);
             getchar(); */
+            printf("%s %d\n",box.message,box.account);
             if(box.type==EOF_OF_BOX) //接收到结束包会退出
             break;
             if(box.type==SEND_MESSAGES)//顺序为　链表前为老信息　链表后为新信息
@@ -245,6 +246,57 @@ int login_client(int conn_fd,char *username)
             }
         }
     }
+
+    //在这里开始接收群消息
+    recv_t tmp;
+    bzero(&tmp,sizeof(recv_t)); //接收到的消息要加入两个链表
+    int yyy=0;
+    while(1)
+    {
+        if(recv(conn_fd,&tmp,sizeof(recv_t),0)<0)
+        perror("error in recv\n");
+        if(tmp.type==EOF_OF_BOX)
+        break;
+        if(tmp.type==NULL_OF_GROUP)
+        {
+            yyy=1;
+            break;
+        }
+        list_group_t cur=(list_group_t)malloc(sizeof(node_group_t));
+        strcpy(cur->account,tmp.message);//群号
+        strcpy(cur->nickname,tmp.message_tmp);//群昵称
+        List_AddTail(group_head,cur);//加到群链表
+    }
+    if(!yyy) //这个代码写的很丑陋　
+    //给每一个群添加消息信息     //这个地方其实设计的有问题　会将数据库所有的消息都发来　
+    //防止后面加上好友以后数据还得重新发　　没有时间了　得赶进度了
+
+    //这个接收包的过程可以对群消息和群成员的链表进行填充
+    while(1){
+        bzero(&tmp,sizeof(recv_t)); //清空结构体　防止隐性错误
+        if(recv(conn_fd,&tmp,sizeof(recv_t),0)<0)
+        perror("error in recv\n");
+        if(tmp.type==EOF_OF_BOX)
+        break; //接收到结束包
+        if(mp_group[atoi(tmp.recv_Acount)]==0)
+        {
+            mp_group[atoi(tmp.recv_Acount)]=tt++;//分配唯一的映射关系
+        }
+        //分配群消息链表
+        list_group_messages_t cur=(list_group_messages_t)malloc(sizeof(node_group_messages_t));
+        bzero(cur,sizeof(node_group_messages_t));
+        strcpy(cur->account,tmp.send_Account);//好友账号
+        strcpy(cur->messages,tmp.message_tmp);//消息
+        cur->type=tmp.type; //群成员的等级
+        List_AddTail(group_messages[mp_group[atoi(tmp.recv_Acount)]],cur);
+
+        //分配群成员链表
+        list_member_t cdr=(list_member_t)malloc(sizeof(node_member_t));
+        strcpy(cdr->account,tmp.send_Account);//其他消息并没有
+        List_AddTail(member[mp_group[atoi(tmp.recv_Acount)]],cdr);
+    }
+    
+
     return 1;  //登陆成功　进入服务界面
 }
 
@@ -641,6 +693,7 @@ int register_group_client(int conn_fd)
     printf("Welcome to register group!\n");
     printf("please enter your group nickname,we will give your a unique account.\n");
     printf("please enter you nickname!\n");
+    getchar();
     get_userinfo(nickname,MAX_USERNAME);
     strcpy(Package.message,nickname);
     strcpy(Package.send_Account,gl_account);
@@ -654,12 +707,14 @@ int register_group_client(int conn_fd)
         perror("error in register send\n");
         return 0;
     } */
+    usleep(500);//等待下消息到来
     list_messages_t tttt;
     List_ForEach(Message_BOX,tttt)
     {
         if(tttt->type==REGISTER_GROUP)
         {
             strcpy(account,tttt->send_account);//参数为提前定制
+            printf("消息盒子中找到　%s %s\n",account,tttt->send_account);
             List_DelNode(tttt); //从消息盒子中获取
             break;
         }
@@ -738,6 +793,7 @@ int Add_group(int conn_fd)
 
     List_AddTail(group_head,tmp);//相当于当先用户加入一个新的群
     //登录阶段加载所有消息记录　以便加入新群后有消息　其实可以加入后再从服务器获取
+    //这样效率肯定会更高
     //项目时间快到了只能先赶进度了
     
     //消息　
@@ -784,6 +840,7 @@ int Dissolve(int conn_fd)
 {
     char buf[256];
     list_member_t curps;
+    list_group_t curpss;
     char account[MAX_ACCOUNT];
     recv_t packet;
     packet.type=DISSOLVE;
@@ -791,22 +848,38 @@ int Dissolve(int conn_fd)
     scanf("%s",account);
     getchar();
     strcpy(packet.recv_Acount,account);//要解散的群号
-    List_ForEach(member[mp_group[atoi(account)]],curps)
-    {
-        if(!strcpy(curps->account,gl_account))
+        if(send(conn_fd,&packet,sizeof(packet),0)<0)
+        perror("error in send dissolve!\n");//服务器应该在两个表中分别删除
+                                            //客户端应该在三个链表中分别删除
+/*         List_ForEach(member[mp_group[atoi(account)]],curps)
         {
-            if(curps->type==OWNER)
+            if(!strcpy(curps->account,gl_account))
             {
-                if(send(conn_fd,&packet,sizeof(packet),0)<0)
-                perror("error in send dissolve!\n");
-                List_DelNode(curps);//在本地删除链表中的数据
-                return 0;
+                if(curps->type==OWNER)
+                {
+                    List_DelNode(curps);//在本地删除链表中的数据
+                }
+            }
+        } */
+        if(member[mp_group[atoi(account)]]!=NULL)
+        List_Destroy(member[mp_group[atoi(account)]],node_member_t);
+        if(group_messages[mp_group[atoi(account)]]!=NULL)
+        List_Destroy(group_messages[mp_group[atoi(account)]],node_group_messages_t);
+        //删除两个链表中的消息
+        printf("到达!\n");
+        //bzero(curpss,sizeof(node_group_t));
+        List_ForEach(group_head,curpss)
+        {
+            printf("%s %s\n",curpss->account,account);
+            if(!strcmp(curpss->account,account))
+            {
+                printf("找到\n");
+                List_DelNode(curpss);  //群成员链表中删除
+                break;
             }
         }
     }
-    printf("Lack of permissions\n");
-    return 1;
-}
+    //printf("Lack of permissions\n");
 
 
 //该函数用在查看群列表以后　可以将某人设为管理员
@@ -882,7 +955,7 @@ void *method_client(void *arg)
     {
         if(recv(fact_fd,&buf,sizeof(recv_t),0)<0)
         perror("error in recv\n");
-        printf("消息盒子收到消息　%d %s\n",buf.type,buf.message);
+        printf("消息盒子收到消息　%d %s\n",buf.type,buf.send_Account);
         list_messages_t temp = (list_messages_t)malloc(sizeof(node_messages_t));
         temp->type=buf.type;//标记位　
         strcpy(temp->send_account,buf.send_Account);//发送者
@@ -892,3 +965,310 @@ void *method_client(void *arg)
         List_AddTail(Message_BOX,temp);
     }
 }
+
+
+int show_group_member(char *account)
+{
+    //char account[MAX_ACCOUNT];
+    Pagination_t paging;
+    node_member_t *pos;
+    int i;
+    char choice;
+    list_member_t curos;
+    paging.totalRecords=0;
+    List_ForEach(member[mp_group[atoi(account)]],curos) paging.totalRecords++;
+	paging.offset = 0;
+	paging.pageSize = FRIEND_PAGE_SIZE;
+    //group_head  在登录时已经初始化
+    //paging.totalRecords = FetchAll_for_Friend_List(head);
+    Paging_Locate_FirstPage(member[mp_group[atoi(account)]], paging);
+    do {
+            //system("clear");
+            printf("链表长度：%d\n",paging.totalRecords);
+            printf(
+                    "\n==============================================================\n");
+            printf(
+                    "********************** Group Member List **********************\n");
+            printf("%10s \n", "Group_account");
+            printf(
+                    "------------------------------------------------------------------\n");
+            Paging_ViewPage_ForEach(member[mp_group[atoi(account)]], paging, node_member_t, pos, i){
+                printf("%10s\n",pos->account);
+            }
+
+            printf(
+                    "------- Total Records:%2d ----------------------- Page %2d/%2d ----\n",
+                    paging.totalRecords, Pageing_CurPage(paging),
+                    Pageing_TotalPages(paging));
+            printf(
+                    "******************************************************************\n");
+            printf(
+                    "[C]hat | [K]ick |[S]et_admin\n");
+            printf(
+                    "[P]revPage | [N]extPage | [R]eturn");
+            printf(
+                    "\n==================================================================\n");
+            printf("Your Choice:");
+            fflush(stdin);
+            scanf("%c", &choice);
+            getchar();
+
+            switch (choice) {
+                case 'c':
+                case 'C':
+                    printf("这个功能不一定能用\n");
+                    printf("Please enter an account you want to chat with:\n");
+                    scanf("%s",account);
+                    getchar();
+                    Chat(account); //通过群进行聊天
+                    break;
+                case 'k':
+                case 'K':
+                    printf("please enter who you what to kicking!\n");
+                    scanf("%s",account);
+                    getchar();
+                    Kicking(fact_fd,account); //踢人
+                    break;
+                case 's':
+                case 'S':
+                    printf("please enter who you what to set him to admin\n");
+                    scanf("%s",account);
+                    getchar();
+                    Set_Admin(fact_fd,account); //把某人设置为管理员
+                    break;
+                case 'p':
+                case 'P':
+                    if (!Pageing_IsFirstPage(paging)) {
+                        Paging_Locate_OffsetPage(group_head, paging, -1, node_group_t);
+                    }
+                    break;
+                case 'n':
+                case 'N':
+                    if (!Pageing_IsLastPage(paging)) {
+                        Paging_Locate_OffsetPage(group_head, paging, 1, node_group_t);
+                    }
+                    break;
+            }
+        } while (choice != 'r' && choice != 'R');  
+}
+
+
+
+//这个函数的作用是进行群聊天
+int Group_Chat(char *account)//参数为想参与群聊的群号
+{
+    char Message[MAX_RECV];
+    Pagination_t paging;
+    node_group_messages_t *pos;
+    char acc_tmp[MAX_ACCOUNT];
+    strcpy(acc_tmp,account);
+    int i;
+    char choice;
+    int flag=0;
+    list_messages_t curos; //用于遍历消息盒子
+    list_group_messages_t cur; //用于遍历本群消息总数
+    paging.totalRecords=0;
+    if(group_messages[mp[atoi(account)]]==NULL) //防止一个新注册的群　消息链表还未初始化
+    {
+        printf("初始化\n");
+        mp_group[atoi(account)]=++dd;
+        List_Init(group_messages[mp[atoi(account)]],node_group_messages_t);
+    }
+    List_ForEach(group_messages[mp_group[atoi(account)]],cur) paging.totalRecords++;
+    //遍历消息链表
+	paging.offset = paging.totalRecords;
+	paging.pageSize = MESSADES_PAGE_SIZE;
+
+            while(1){
+            flag=0;//退出此函数标记
+            Paging_Locate_FirstPage(group_messages[mp[atoi(account)]], paging);
+            //system("clear");
+            printf("链表长度：%d\n",paging.totalRecords);
+
+            //在消息盒子中查找是否有正在发消息的好友发送来的消息
+            List_ForEach(Message_BOX,curos) 
+            {
+                //消息肯定是发送者是正在聊天的好友的账号               //这个参数为群号
+                if(curos->type==SEND_GROUP_MESSAGES && !strcmp(curos->send_account,account))
+                {
+                    list_group_messages_t temp = (list_group_messages_t)malloc(sizeof(node_group_messages_t));
+                    strcpy(temp->messages,curos->messages);
+                    strcpy(temp->nickname,curos->nickname);
+                    List_AddTail(group_messages[mp_group[atoi(account)]],temp);
+                    paging.totalRecords+=1;//更新消息链表
+                    List_FreeNode(curos); //这个消息已经载入消息链表　可以删除了
+                }
+            }
+            List_ForEach(group_messages[mp_group[atoi(account)]],cur)
+            {
+                cout << cur->messages << endl;
+            }
+
+            printf(
+                    "\n==================================================================\n");
+            printf(
+                    "**************************** %s ****************************\n",account);//有消息可以用这个　Messages[mp[account]]->nickname
+                               //没有消息不就凉了
+            printf(
+                    "------------------------------------------------------------------\n");
+                    //printf("((((%d,%s,%d\n",mp[atoi(acc_tmp)],acc_tmp,strlen(acc_tmp));
+            Paging_ViewPage_ForEach(group_messages[mp_group[atoi(account)]], paging, node_group_messages_t, pos, i){
+                //链表中名称必为好友昵称
+                //printf("%s :%s :\n",pos->nickname,fact_name);
+                if(strcmp(pos->nickname,fact_name))//怎么比都可以
+                {
+                    printf("%-65s\n",pos->nickname);
+                    printf("%-65s\n",pos->messages);
+                }else{
+                    printf("%65s\n",fact_name);
+                    printf("%65s\n",pos->messages);
+                }
+                putchar('\n');
+            }
+
+            printf(
+                    "------- Total Records:%2d ----------------------- Page %2d/%2d ----\n",
+                    paging.totalRecords, Pageing_CurPage(paging),
+                    Pageing_TotalPages(paging));
+            printf(
+                    "******************************************************************\n");
+            printf(
+                    "[P]revPage | [N]extPage | [I]uput | [R]eturn");
+            printf(
+                    "\n==================================================================\n");
+            printf("Your Choice:");
+            fflush(stdin);
+            scanf("%c", &choice);
+            getchar();
+            fflush(stdin);
+
+            switch (choice) {
+                case 'I':
+                case 'i':
+                {
+                    //将消息在发向服务器的同时把消息存入　本好友账号映射的消息链表
+                    printf("please enter:\n");
+                    cin.getline(Message,sizeof(Message)); //发送者　接收者　消息　昵称不急
+                    list_messages_t temp=(list_messages_t)malloc(sizeof(node_messages_t));
+                    strcpy(temp->messages,Message);
+                    strcpy(temp->send_account,gl_account);
+                    strcpy(temp->nickname,fact_name);//随便即可　只要不和自己的名字重合
+                    strcpy(temp->recv_account,account);
+/*                     if(mp[account]==0)
+                    mp[account]=++tt; */
+                    List_AddTail(Messages[mp[atoi(account)]],temp);//加入到消息链表
+                    paging.totalRecords++;
+                    send_friend_messages(account,Message);
+                }
+                    break;
+                case 'p':
+                case 'P':
+                    if (!Pageing_IsFirstPage(paging)) {
+                        Paging_Locate_OffsetPage(Messages[mp[atoi(acc_tmp)]], paging, -1, node_messages_t);
+                    }
+                    break;
+                case 'n':
+                case 'N':
+                    if (!Pageing_IsLastPage(paging)) {
+                        Paging_Locate_OffsetPage(Messages[mp[atoi(acc_tmp)]], paging, 1, node_messages_t);
+                    }
+                    break;
+                case 'r':
+                case 'R':
+                    flag=1;
+                    break;
+            }
+            if(flag) break;
+        } 
+}
+
+int show_group_list()
+{
+    char account[MAX_ACCOUNT];
+    Pagination_t paging;
+    node_group_t *pos;
+    int i;
+    char choice;
+    list_group_t curos;
+    paging.totalRecords=0;
+    List_ForEach(group_head,curos) paging.totalRecords++;
+	paging.offset = 0;
+	paging.pageSize = FRIEND_PAGE_SIZE;
+    //group_head  在登录时已经初始化
+    //paging.totalRecords = FetchAll_for_Friend_List(head);
+    do {
+            paging.totalRecords=0;
+            Paging_Locate_FirstPage(group_head, paging);
+            List_ForEach(group_head,curos) paging.totalRecords++;
+            //system("clear");
+            printf("链表长度：%d\n",paging.totalRecords);
+            printf(
+                    "\n==============================================================\n");
+            printf(
+                    "********************** Group  List **********************\n");
+            printf("%15s  %20s\n", "account", "Group_Name");
+            printf(
+                    "------------------------------------------------------------------\n");
+            Paging_ViewPage_ForEach(group_head, paging, node_group_t, pos, i){
+                printf("%10s      %20s\n",pos->account,pos->nickname);
+            }
+
+            printf(
+                    "------- Total Records:%2d ----------------------- Page %2d/%2d ----\n",
+                    paging.totalRecords, Pageing_CurPage(paging),
+                    Pageing_TotalPages(paging));
+            printf(
+                    "******************************************************************\n");
+            printf(
+                    "[Q]uery | [C]hat | [D]issolve | [E]xit_from_group\n");                    
+            printf(
+                    "[P]revPage | [N]extPage | [R]eturn\n");
+            printf(
+                    "\n==================================================================\n");
+            printf("Your Choice:");
+            fflush(stdin);
+            scanf("%c", &choice);
+            getchar();
+
+            switch (choice) {
+                case 'c':
+                case 'C':
+                    printf("Please enter an account you want to chat with:\n");
+                    scanf("%s",account);
+                    getchar();
+                    Group_Chat(account);
+                    break;
+                case 'Q':
+                case 'q':
+                    //查看群成员列表
+                    printf("Please enter an account you want to query with:\n");
+                    scanf("%s",account);
+                    getchar();
+                    show_group_member(account);
+                    break;
+                case 'd':
+                case 'D':
+                    Dissolve(fact_fd); //解散群
+                    break;
+                case 'e':
+                case 'E':
+                    Quit_group(fact_fd);//退出群
+                    break;
+                case 'p':
+                case 'P':
+                    if (!Pageing_IsFirstPage(paging)) {
+                        Paging_Locate_OffsetPage(group_head, paging, -1, node_group_t);
+                    }
+                    break;
+                case 'n':
+                case 'N':
+                    if (!Pageing_IsLastPage(paging)) {
+                        Paging_Locate_OffsetPage(group_head, paging, 1, node_group_t);
+                    }
+                    break;
+            }
+        } while (choice != 'r' && choice != 'R');   
+}
+
+
+//这个函数的作用是在查看群时选择要查询的群进行群员查询
