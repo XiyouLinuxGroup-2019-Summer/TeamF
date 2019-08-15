@@ -30,36 +30,36 @@
 #define ADMIN               2       //管理员
 #define COMMON              3       //群员
 /*-----------------------------------------------*/
-#define NULL_OF_GROUP      -2       //群数量为零的特殊结束符号　用于login
-#define EOF_OF_BOX         -1       //发包结束符
-#define LOGIN               0       //登录请求
-#define REGISTER            1       //注册请求
-#define RETRIEVE            2       //找回密码
-#define ADD_FRIENDS         3       //添加好友
-#define ADD_FRIENDS_QUERY   4       //收到添加好友请求后做出答复的数据类型
-#define DEL_FRIENDS         5       //删除好友
-#define LIST_FRIENDS        6       //显示好友列表
-#define SEND_MESSAGES       7       //单聊　发送信息
-#define REGISTER_GROUP      8       //注册群
-#define ADD_GROUP           9       //加入群
-#define QUIT                10      //退出群
-#define DISSOLVE            11      //解散群
-#define SET_ADMIN           12      //设置管理员
-#define KICKING             13      //踢人
-#define SEND_GROUP_MESSAGES 14      //群消息
+#define NULL_OF_GROUP       'a'       //群数量为零的特殊结束符号　用于login
+#define EOF_OF_BOX          'b'       //发包结束符
+#define LOGIN               'c'       //登录请求
+#define REGISTER            'd'       //注册请求
+#define RETRIEVE            'e'      //找回密码
+#define ADD_FRIENDS         'f'      //添加好友
+#define ADD_FRIENDS_QUERY   'g'      //收到添加好友请求后做出答复的数据类型
+#define DEL_FRIENDS         'h'      //删除好友
+#define LIST_FRIENDS        'i'      //显示好友列表
+#define SEND_MESSAGES       'j'      //单聊　发送信息
+#define REGISTER_GROUP      'k'      //注册群
+#define ADD_GROUP           'l'      //加入群
+#define QUIT                'm'      //退出群
+#define DISSOLVE            'n'      //解散群
+#define SET_ADMIN           'o'      //设置管理员
+#define KICKING             'p'      //踢人
+#define SEND_GROUP_MESSAGES 'q'      //群消息
 
 /*-----------------------------------------------*/
 
 typedef struct {
-    int  type;   //事件类型
-    int send_fd;
+    char type;   //事件类型 用type[0]来判断
+    char send_fd[MAX_ACCOUNT];
     char send_Account[MAX_ACCOUNT];  //账号　用账号来区分不同的人
-    int recv_fd;
+    char recv_fd[MAX_ACCOUNT];
     char recv_Acount[MAX_ACCOUNT];    //
     char message[MAX_RECV];
     char message_tmp[MAX_RECV];//放两个缓冲区　以备不时之需
-    int epfd;
-    int conn_fd;
+    char epfd[MAX_ACCOUNT];
+    char conn_fd[MAX_ACCOUNT];
 }recv_t; //客户端第一次recv中包的格式
 
 typedef struct 

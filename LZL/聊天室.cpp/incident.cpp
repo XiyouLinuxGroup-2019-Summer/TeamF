@@ -37,20 +37,21 @@ int my_recv(int conn_fd,char *data_buf,int len)
 {
         char *p = data_buf;
         memset(data_buf, 0, len);
-        printf("len = %d\n", len);
         while (len > 0) {
                 ssize_t n = recv(conn_fd, p, len, 0);
+               // printf("connfd   %d \n",conn_fd);
                 if (n < 0)
                         ;
                 else if (n == 0)
                         ;
                 else {
-                        printf("recv %zd bytes: %s\n", n, data_buf);
+                        printf("recv %zd bytes: %s\n", n, p);
                         p += n;
                         len -= n;
                 }
         }
-        return 0;
+        p[len]='\0';
+        return len;
 }
 
 int get_userinfo(char *buf,int len)
@@ -103,12 +104,14 @@ int FetchAll_for_Friend_List()
         if(my_recv(fact_fd,(char *)&pacage,sizeof(recv_t))<0)
         perror("error in recv\n");//收包
 
+        pacage = (recv_t )pacage;        
+        printf("%d \n",pacage.type);
         if(pacage.type==EOF_OF_BOX)
-        break;//接收到EOF结束符　退出接收循环
+           break;//接收到EOF结束符　退出接收循环
 
         //利用数据包中数据对链表结点进行赋值
         list_friend_t temp=(list_friend_t)malloc(sizeof(node_friend_t));
-        temp->status=pacage.conn_fd;//状态
+        temp->status=atoi(pacage.conn_fd);//状态
         strcpy(temp->recv_account,pacage.message_tmp);//好友账号
         strcpy(temp->nickname,pacage.message);//昵称
         //printf("%s\n",temp->nickname);
@@ -126,9 +129,11 @@ int login_client(int conn_fd,char *username)
     int              ret;
     recv_t           Package;
     Package.type   = LOGIN;
-    Package.send_fd= conn_fd;
     char buf[MAX_RECV];
+    sprintf(buf,"%d",conn_fd);
+    strcpy(Package.send_fd,buf);
     int number=3;
+    bzero(&buf,sizeof(buf));
     getchar();
     system("clear");
     while(number--)  //三次机会
@@ -156,6 +161,8 @@ int login_client(int conn_fd,char *username)
     if(number==-1) return 0;
     //登录成功以后开始接收离线消息盒子里的消息
     my_recv(conn_fd,buf,MAX_RECV);
+    printf("%s\n",buf);
+
     if(!strcmp(buf,BOX_NO_MESSAGES))
     printf("消息盒子无记录！\n");//登陆成功 离线消息盒子无记录　进入服务界面
     else
@@ -165,7 +172,7 @@ int login_client(int conn_fd,char *username)
         printf("进行到循环\n");
         while(1)
         {
-            if(my_recv(conn_fd,(char*)&box,sizeof(box))<0)
+            if(my_recv(conn_fd,(char*)&box,sizeof(Box_t))<0)
             perror("error in recv\n");
             if(box.type==EOF_OF_BOX)
             {
@@ -199,11 +206,12 @@ int login_client(int conn_fd,char *username)
     //printf("%s %d %s \n",box.message,box.type,box.account);
     //接收完离线消息盒子记录开始接收好友信息列表
     //实现为直接开始收包　最后一个结束包其中无数据　标记位为EOF
+    printf("开始加载好友链表\n");
     FetchAll_for_Friend_List();
     //好友关系记录发送完成　结尾为一个结尾包　
     printf("好友列表加载完成\n");
     //接收到一个标记包　表示是否有消息记录
-    if(my_recv(conn_fd,buf,sizeof(buf))<0)
+    if(my_recv(conn_fd,buf,MAX_USERNAME)<0)
     perror("error in client recv messages record\n");
     if(!strcmp(buf,BOX_NO_MESSAGES))
     printf("消息记录无记录！\n");
@@ -296,7 +304,10 @@ int register_client(int conn_fd,char *account)  //注册请求　返回一个账
     int ret;
     recv_t           Package;
     Package.type   = REGISTER;
-    Package.send_fd= conn_fd;
+    char buffff[MAX_ACCOUNT];
+    sprintf(buffff,"%d",conn_fd);
+    //Package.send_fd= conn_fd;
+    strcpy(Package.send_fd,buffff);
     char password[MAX_PASSWORD];
     char telephone[MAX_TELEPHONE];
     char nickname[MAX_USERNAME];
@@ -345,7 +356,6 @@ int Retrieve_client(int conn_fd)
     int              ret=0;
     recv_t           Package;
     Package.type   = RETRIEVE;
-    Package.send_fd= conn_fd;
     char Account[MAX_ACCOUNT];
     char telephone[MAX_TELEPHONE];
     char new_password[MAX_PASSWORD];
@@ -387,7 +397,6 @@ int Add_Friend(int conn_fd)
     int              ret=0;
     recv_t           Package;
     Package.type   = ADD_FRIENDS;
-    Package.send_fd= conn_fd;
     char Account[MAX_ACCOUNT];
     char message[MAX_RECV];   //添加好友时给对方发送的话
     char temp[64];   //就是一个接收消息的缓冲区
@@ -416,7 +425,6 @@ int Del_Friend(int conn_fd)
     int              ret=0;
     recv_t           Package;
     Package.type   = DEL_FRIENDS;
-    Package.send_fd= conn_fd;
     char Account[MAX_ACCOUNT];
     list_friend_t curpos;
     char message[MAX_RECV];   //添加好友时给对方发送的话
@@ -675,7 +683,6 @@ int register_group_client(int conn_fd)
     int ret;
     recv_t           Package;
     Package.type   = REGISTER_GROUP;
-    Package.send_fd= conn_fd; //这个人要被标记为群主
     char nickname[MAX_USERNAME];
     char account[MAX_ACCOUNT];
     //system("clear");
@@ -743,7 +750,6 @@ int Add_group(int conn_fd)
     int              ret=0;
     recv_t           Package;
     Package.type   = ADD_GROUP;
-    Package.send_fd= conn_fd;
     strcpy(Package.recv_Acount,gl_account);
     strcpy(Package.message_tmp,fact_name);
     char Account[MAX_ACCOUNT];
@@ -796,7 +802,6 @@ int Quit_group(int conn_fd)
     int              ret=0;
     recv_t           Package;
     Package.type   = QUIT;
-    Package.send_fd= conn_fd;
     strcpy(Package.recv_Acount,gl_account);//本身的账号
     char Account[MAX_ACCOUNT];
     char message[MAX_RECV];   //添加好友时给对方发送的话
