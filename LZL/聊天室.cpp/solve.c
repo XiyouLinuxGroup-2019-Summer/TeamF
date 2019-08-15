@@ -184,7 +184,7 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     MYSQL_ROW rowwo;
     if((ddd=mysql_num_rows(res_tmp))==0) //群为零　也就不用发送消息记录了
     {
-        tmp_tmp.type=EOF_OF_BOX;//直接发送标记符
+        tmp_tmp.type=NULL_OF_GROUP;//直接发送标记符
         send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0); //客户端是一个while循环接收,所以一个足够
         return 0;
     }else{
@@ -193,17 +193,18 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
             int ret=0;
             rowwo=mysql_fetch_row(res_tmp);
             bzero(&tmp_tmp,sizeof(recv_t));
-            strcpy(tmp_tmp.message,row[0]);//所有包含本用户的群
-            strcpy(tmp_tmp.message_tmp,row[2]);
-            tmp_tmp.type=atoi(row[3]);
-            if((ret==send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0)<0))
+            strcpy(tmp_tmp.message,rowwo[0]);//所有包含本用户的群
+            strcpy(tmp_tmp.message_tmp,rowwo[2]);//昵称
+            tmp_tmp.type=atoi(rowwo[3]);//在群中的职位
+            if((ret=send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0)<0))
             {
                 perror("error in send group\n");
             }
         }
         bzero(&tmp_tmp,sizeof(recv_t)); //发送一个结束包
         tmp_tmp.type=EOF_OF_BOX;
-        if((ret==send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0)<0))
+        printf("结束包已发送\n");
+        if((ret=send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0)<0))
         {
             perror("error in send group\n");
         }
@@ -215,6 +216,7 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     mysql_query(mysql,buf);
     res_tmp=mysql_store_result(mysql);
     int fff=mysql_num_rows(res_tmp); //获取所有消息　发送给客户端
+    printf("消息记录共有：　%d\n",fff);
     while(fff--)
     {
         //在客户端在接收的时候根据
@@ -232,6 +234,7 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     }
     bzero(&tmp_tmp,sizeof(recv_t)); //发一个结束包
     tmp_tmp.type=EOF_OF_BOX;
+    printf("消息结束包已发送\n");
     if(send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0)<0)
     {
         perror("error in send\n");
@@ -478,7 +481,9 @@ int register_group_server(recv_t *sock,MYSQL *mysql)
     account,sock->send_Account,sock->message,OWNER);//把这个群存入数据库
     mysql_query(mysql,buf);
 
+    printf("注册得到的群号: %s\n",account);
     strcpy(packet.send_Account,account);
+    packet.type=REGISTER_GROUP;
     if(send(sock->send_fd,&packet,sizeof(recv_t),0)<0)
     perror("error in register group !\n");
 }
@@ -519,10 +524,12 @@ int Dissolve_server(recv_t *sock,MYSQL *mysql)//数据库中删除相关数据�
     char recv_buf[MAX_USERNAME];//登录时默认使用字符串
     int flag_recv=USERNAME;
     char buf[256];
-    sprintf(buf,"delete group_list where group_account = %s",sock->recv_Acount);
+    sprintf(buf,"delete from group_list where group_account = '%s'",sock->recv_Acount);
+    printf("%s\n",buf);
     mysql_query(mysql,buf);
     //直接删除即可　已经在客户端检测过有权限　
-    sprintf(buf,"delete group_messsges_list where group_account = %s",sock->recv_Acount);
+    sprintf(buf,"delete from group_messsges_list where group_account = '%s'",sock->recv_Acount);
+    printf("%s\n",buf);
     mysql_query(mysql,buf);
     //两张表中的数据都要删除
     //在这里其实可以改良　就是删除的时候给每一个成员发送一个包　消息盒子接收　随即删除

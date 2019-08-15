@@ -106,9 +106,9 @@ int main(int argc,char **argv)  //暂时无全局变量
 		printf("      [S]查看好友列表             [C]查看好友请求\n");
         //消息盒子中只显示好友请求　其他在与好友聊天时自动载入消息链表
 		printf("                      \n");
-		printf("      [R]查看群                      [Q]查询演出界面\n");
+		printf("      [N]查看群列表                [R]注册群\n");
 		printf("                       \n");
-		printf("      [N]统计销售额界面                [L]统计票房界面\n");
+		printf("      [J]统计销售额界面                [L]统计票房界面\n");
 		printf("                       \n");
 		printf("      [F]维护个人资料                  [A]管理系统用户\n");
 		printf("                       \n");
@@ -145,9 +145,11 @@ int main(int argc,char **argv)  //暂时无全局变量
 			break; 
 		case 'R': 
 		case 'r': 
+            register_group_client(conn_fd);
 			break; 
 		case 'N': 
 		case 'n': 
+            show_group_list();
 			break; 
 		case 'L': 
 		case 'l':

@@ -30,7 +30,8 @@
 #define ADMIN               2       //管理员
 #define COMMON              3       //群员
 /*-----------------------------------------------*/
-#define EOF_OF_BOX          -1      //发包结束符
+#define NULL_OF_GROUP      -2       //群数量为零的特殊结束符号　用于login
+#define EOF_OF_BOX         -1       //发包结束符
 #define LOGIN               0       //登录请求
 #define REGISTER            1       //注册请求
 #define RETRIEVE            2       //找回密码
@@ -45,7 +46,7 @@
 #define DISSOLVE            11      //解散群
 #define SET_ADMIN           12      //设置管理员
 #define KICKING             13      //踢人
-
+#define SEND_GROUP_MESSAGES 14      //群消息
 
 /*-----------------------------------------------*/
 
