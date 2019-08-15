@@ -65,11 +65,14 @@ void *thread_read(void *sock_fd) {
                        }
                        printf("\n");
                       // scanf("%s", send_pack->data.read_buff);
+                       memset(send_pack->data.write_buff, 0, sizeof(send_pack->data.write_buff));
                        if (send(*(int *)sock_fd, send_pack, sizeof(PACK), 0) < 0) {
                            my_err("send", __LINE__);
                        }
                        pthread_mutex_lock(&mutex_cli);
-                       pthread_cond_wait(&cond_cli, &mutex_cli);
+                       while (strlen(send_pack->data.write_buff) != 0) {
+                            pthread_cond_wait(&cond_cli, &mutex_cli);
+                       }
                        pthread_mutex_unlock(&mutex_cli);
                        printf("%s\n", send_pack->data.write_buff);
                        break;
@@ -225,9 +228,11 @@ void *thread_read(void *sock_fd) {
                         }
                         printf("\n");
                         // scanf("%s", send_pack->data.write_buff);
-                        if (send(*(int *)sock_fd, send_pack, sizeof(PACK), 0) < 0) {
+                         int ret;
+                        if ((ret = send(*(int *)sock_fd, send_pack, sizeof(PACK), 0)) < 0) {
                             my_err("send", __LINE__);
                         }
+                        printf("^^%d\n", ret);
                         pthread_mutex_lock(&mutex_cli);
                         pthread_cond_wait(&cond_cli, &mutex_cli);
                         pthread_mutex_unlock(&mutex_cli);
@@ -925,6 +930,7 @@ void *thread_group_list(void *sock_fd) {
 
 void *thread_write(void *sock_fd) {
     pthread_t pid;
+    int ret;
     group_list = (GROUP_G *)malloc(sizeof(GROUP_G));
     member_list = (GROUP *)malloc(sizeof(GROUP));
     list = (FRIEND *)malloc(sizeof(FRIEND));
@@ -936,9 +942,10 @@ void *thread_write(void *sock_fd) {
     file->have = 0;
     while (1) {
         memset(recv_pack, 0, sizeof(PACK));
-        if (recv(*(int *)sock_fd, recv_pack, sizeof(PACK), 0) < 0) {
+        if ((ret = recv(*(int *)sock_fd, recv_pack, sizeof(PACK), 0)) < 0) {
             my_err("recv", __LINE__);
         }
+        printf("i$$$%d\n", ret);
         switch(recv_pack->type) {
             case EXIT:
                     {
