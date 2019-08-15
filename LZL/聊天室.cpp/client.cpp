@@ -10,7 +10,7 @@ int main(int argc,char **argv)  //暂时无全局变量
     struct sockaddr_in serv_addr;
     char buf[BUFSIZ];
     int Port=SERV_POT;    //宏中自定义的端口号　后面还要改
-    char client_IP[32]="127.0.0.1";//ＩＰ地址
+    char client_IP[32]="192.168.3.86";//ＩＰ地址
     char username[MAX_USERNAME];
     char register_tmp[MAX_ACCOUNT];
     recv_t Package;//登录请求时要发的包
