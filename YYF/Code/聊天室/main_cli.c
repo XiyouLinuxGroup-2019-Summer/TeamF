@@ -65,13 +65,17 @@ void *thread_read(void *sock_fd) {
                        }
                        printf("\n");
                       // scanf("%s", send_pack->data.read_buff);
+                      memset(send_pack->data.write_buff, 0, sizeof(send_pack->data.write_buff));
                        if (send(*(int *)sock_fd, send_pack, sizeof(PACK), 0) < 0) {
                            my_err("send", __LINE__);
                        }
+                       
                        pthread_mutex_lock(&mutex_cli);
+                       while  (strlen(send_pack->data.write_buff) == 0) {
                        pthread_cond_wait(&cond_cli, &mutex_cli);
+                       }
                        pthread_mutex_unlock(&mutex_cli);
-                       printf("%s\n", send_pack->data.write_buff);
+                       printf("$$$$%s\n", send_pack->data.write_buff);              
                        break;
                    }
            case 2:
@@ -1041,8 +1045,10 @@ void *thread_write(void *sock_fd) {
                         memset(send_pack->data.write_buff, 0, sizeof(send_pack->data.write_buff));
                         strcpy(send_pack->data.write_buff, recv_pack->data.write_buff);
                         send_pack->data.send_fd = recv_pack->data.recv_fd;
+                        printf("%s\n",recv_pack->data.write_buff);
+                        printf("%s\n", send_pack->data.write_buff);
                         pthread_create(&pid, NULL, thread_box, sock_fd);
-                        pthread_join(pid, NULL);
+                       /*  pthread_join(pid, NULL); */
                         printf("离线期间消息盒子中有%d条消息,%d个好友请求,%d条群消息", box->talk_number, box->friend_number, box->number);
                         pthread_mutex_lock(&mutex_cli);
                         pthread_cond_signal(&cond_cli);
