@@ -108,11 +108,8 @@ int main(int argc,char **argv)  //暂时无全局变量
 		printf("                      \n");
 		printf("      [N]查看群列表                [R]注册群\n");
 		printf("                       \n");
-		printf("      [J]加入群　　                [L]统计票房界面\n");
+		printf("      [J]加入群　　                [L]发送文件\n");
 		printf("                       \n");
-		printf("      [F]维护个人资料                  [A]管理系统用户\n");
-		printf("                       \n");
-		printf("\n");
 		printf("      [E]退出登录\n");
 		printf("\n==================================================================\n");
 		printf("\n请输入您要进行的操作");
@@ -131,14 +128,6 @@ int main(int argc,char **argv)  //暂时无全局变量
 		case 's':
             show_friend_list();
 			break;
-		case 'c': 
-		case 'C':
-		 	system("clear");
-			 break; 
-		case 'Q': 
-		case 'q': 
-			system("clear");
-			 break; 
 		case 'j': 
 		case 'J': 
 			system("clear");
@@ -154,6 +143,7 @@ int main(int argc,char **argv)  //暂时无全局变量
 			break; 
 		case 'L': 
 		case 'l':
+            send_file();
 			system("clear");
 			break;
 		}

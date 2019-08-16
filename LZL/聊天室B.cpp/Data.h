@@ -24,8 +24,8 @@
 #define VAILD              'y'      //用户信息有效
 #define USERNAME            0
 #define PASSWORD            1
-#define BOX_NO_MESSAGES    "@@@@@@@@@@@@@"
-#define BOX_HAVE_MESSAGS   "$$$$$$$$$$$$$"
+#define BOX_NO_MESSAGES    "@@@@@@@@@@@@@"  //无文件标识符
+#define BOX_HAVE_MESSAGS   "$$$$$$$$$$$$$"  //有文件标识符
 #define OWNER               1       //群主
 #define ADMIN               2       //管理员
 #define COMMON              3       //群员
@@ -47,6 +47,7 @@
 #define SET_ADMIN           12      //设置管理员
 #define KICKING             13      //踢人
 #define SEND_GROUP_MESSAGES 14      //群消息
+#define SEND_FILE           15      //发送文件
 
 /*-----------------------------------------------*/
 

@@ -158,7 +158,8 @@ int main()
                 temp->epfd=epfd;
                 temp->conn_fd=events[i].data.fd;
                 printf("进入线程\n");
-                pth1=pthread_create(&pth1,NULL,solve,temp);//开一个线程去判断任务类型从而执行 值传递
+                //pth1=pthread_create(&pth1,NULL,solve,temp);//开一个线程去判断任务类型从而执行 值传递
+                solve((void*)temp);
             }  
         }
     }

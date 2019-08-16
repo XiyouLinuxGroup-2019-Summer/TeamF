@@ -252,7 +252,7 @@ int login_client(int conn_fd,char *username)
         Box_t box;
         while(1)
         {
-            printf("开始接收消息　%d\n",sizeof(Box_t));
+             //printf("开始接收消息　%d\n",sizeof(Box_t));
             if(my_recv_tmp(conn_fd,(char*)&box,sizeof(Box_t))<0)
             perror("error in recv\n");
 /*             printf("%s\n",box.message);
@@ -327,7 +327,7 @@ int login_client(int conn_fd,char *username)
         List_AddTail(group_messages[mp_group[atoi(tmp.recv_Acount)]],cur);
 
         //分配群成员链表
-        printf(" 成员                         %s\n",tmp.send_Account);
+        //printf(" 成员                         %s\n",tmp.send_Account);
         
 /*         if(pp[atoi(tmp.send_Account)]==0)  //有bug　一个成员只能在所有群中加载一次
         {
@@ -353,7 +353,7 @@ int login_client(int conn_fd,char *username)
         }
         //原因在于cdr有malloc后分配的值　所以其值其实始终相当于消息链表的头结点　所以插入后一直没有值
         //其实最简单的就是不给cur分配内存空间
-        free(cdr);
+        //free(cdr);   //这里free会把原链表free
         if(!lzl)
         {
             list_member_t cudr=(list_member_t)malloc(sizeof(node_member_t));
@@ -1379,4 +1379,11 @@ int show_group_list()
                     break;
             }
         } while (choice != 'r' && choice != 'R');   
+}
+
+
+
+int send_file()
+{
+    
 }
