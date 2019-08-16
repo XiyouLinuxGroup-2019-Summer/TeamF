@@ -121,7 +121,7 @@ int main()
                     list_status_t curps;
                     char buf_tmp[256];
                     List_ForEach(status_per,curps){
-                        printf("一次n");
+                        //printf("一次n");
                         if(curps->fdd==events[i].data.fd){
                             sprintf(buf_tmp,"update Data set status = '0' where Account = '%s'",curps->account);
                             //printf("%s\n",buf_tmp);
@@ -147,7 +147,7 @@ int main()
                 {
                     list_status_t tmp=(list_status_t)malloc(sizeof(node_friend_t));
                     tmp->fdd=events[i].data.fd;//发送者套接字
-                    printf("套接字%d\n",events[i].data.fd);
+                    //printf("套接字%d\n",events[i].data.fd);
                     strcpy(tmp->account,recv_buf.send_Account); //连接者账号　//用来在删除时找到账号修改状态
                     List_AddTail(status_per,tmp); //加入在线者链表
 
@@ -157,7 +157,7 @@ int main()
                 *temp=recv_buf;
                 temp->epfd=epfd;
                 temp->conn_fd=events[i].data.fd;
-                printf("进入线程\n");
+                //printf("进入线程\n");
                 //pth1=pthread_create(&pth1,NULL,solve,temp);//开一个线程去判断任务类型从而执行 值传递
                 solve((void*)temp);
             }  

@@ -10,6 +10,7 @@
 #define FRIEND_PAGE_SIZE   5      //好友列表分页最大数 
 #define EVENTS_MAX_SIZE    1024   //epoll接收事件最大数 
 #define MAX_CONTECT_SIZE   1024   //服务器最大连接数
+#define MAX_PATH_NAME      255    //文件名最长255 路径最长4096 
 #define MAX_USERNAME       64     //名称长度最大数
 #define MAX_ACCOUNT        32     //账号长度最大值
 #define MAX_PASSWORD       32     //密码最大长度
@@ -48,6 +49,7 @@
 #define KICKING             13      //踢人
 #define SEND_GROUP_MESSAGES 14      //群消息
 #define SEND_FILE           15      //发送文件
+#define RECV_FILE           16      //客户端收文件
 
 /*-----------------------------------------------*/
 
@@ -131,6 +133,12 @@ typedef struct status_node //在服务器使用
 	struct status_node *next;
 	struct status_node *prev;
 }node_status_t,*list_status_t;
+
+typedef struct  //把一个结构体当做参数传入服务器传输线程
+{
+	char count[MAX_ACCOUNT];
+	char path[256];
+}recv_file_t;
 
 //包含分页器与链表操作
 #define List_Init(list, list_node_t) {					\

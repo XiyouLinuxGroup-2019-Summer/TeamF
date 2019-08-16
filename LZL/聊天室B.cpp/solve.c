@@ -9,6 +9,10 @@
 #include<errno.h>
 #include<pthread.h>
 #include<stdio.h>
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+#include<unistd.h>
 #include<mysql/mysql.h>
 #include"Data.h"
 list_status_t status_per;
@@ -635,6 +639,35 @@ int Send_group_messages_server(recv_t *sock,MYSQL *mysql)//需要发送给每一
     return 0;
 }
 
+
+int Send_file_server(recv_t *recv_buf)
+{
+    recv_t package;
+    bzero(&package,sizeof(recv_t));
+    list_status_t ptr;
+    int conn_fd=0;
+    printf("进入发送文件函数\n");
+    List_ForEach(status_per,ptr)
+    {
+        printf("%s  %s\n",recv_buf->recv_Acount,ptr->account);
+        if(!strcmp(recv_buf->recv_Acount,ptr->account)){
+            conn_fd=ptr->fdd;  //证明在线
+            printf("找到在线\n");
+            break;
+        }
+    }
+    if(!conn_fd)//如果不在线转离线消息处理
+    {
+        //转为离线文件处理
+    }
+    package.type=RECV_FILE;
+    strcpy(package.message_tmp,recv_buf->message_tmp);//文件名称
+    strcpy(package.message,recv_buf->message);
+    if(send(conn_fd,&package,sizeof(recv_t),0)<0)//消息盒子接收
+    perror("error in send file in server\n");
+    return 0;
+}
+
 int *solve(void *arg)
 {
     MYSQL mysql;
@@ -644,7 +677,7 @@ int *solve(void *arg)
     mysql_set_character_set(&mysql,"utf8");//调整为中文字符
     recv_t *recv_buf=(recv_t *)arg;
     int recv_flag=recv_buf->type;
-    printf("消息号码　: %d\n",recv_flag);
+    //printf("消息号码　: %d\n",recv_flag);
     switch (recv_flag)
     {
         case LOGIN :
@@ -691,6 +724,9 @@ int *solve(void *arg)
             break;
         case SEND_GROUP_MESSAGES:
             Send_group_messages_server(recv_buf,&mysql);
+            break;
+        case SEND_FILE:
+            Send_file_server(recv_buf);
             break;
         default:
             printf("error\n");

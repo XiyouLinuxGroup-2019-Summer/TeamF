@@ -3,6 +3,7 @@
 int main(int argc,char **argv)  //暂时无全局变量
 {
     setbuf(stdin,NULL);
+    pthread_t pp_tmp;//发送文件要重新开一个线程　防止阻塞本账号与其他人的聊天
     int i;
     int ret;
     int conn_fd;
@@ -13,6 +14,7 @@ int main(int argc,char **argv)  //暂时无全局变量
     char client_IP[32]="127.0.0.1";//ＩＰ地址
     char username[MAX_USERNAME];
     char register_tmp[MAX_ACCOUNT];
+    recv_file_t recv_file;
     recv_t Package;//登录请求时要发的包
 
     List_Init(head,node_friend_t);     //初始化好友链表 
@@ -60,7 +62,7 @@ int main(int argc,char **argv)  //暂时无全局变量
     int ans=0;      //巧妙的地方在于在登录时做了消息离线处理　登录一完成即显示离线消息　数据库实现
                     //所以后面主功能块可以开一个线程专门收消息　与前面并不冲突
     do{
-        //system("clear");
+        system("clear");
         printf("Register      [R]     Enter   [E]\n");
         printf("Back_password [B]     Quit    [Q]\n");
         scanf("%c",&ch);
@@ -96,7 +98,7 @@ int main(int argc,char **argv)  //暂时无全局变量
     pthread_create(&pth1,NULL,method_client,NULL); //开一个线程专门收包
 	char choice;
 	 do { 
-		//system("clear");
+		system("clear");
 		printf("\n\n====================================================================\n");
 		printf("\n========您好，[%s]先生/女士,欢迎来到zhaolonga-happychat=========\n",username);
 		printf("\n==================================================================\n");
@@ -143,13 +145,24 @@ int main(int argc,char **argv)  //暂时无全局变量
 			break; 
 		case 'L': 
 		case 'l':
-            send_file();
-			system("clear");
+            system("clear");
+            bzero(&recv_file,sizeof(recv_file_t));
+            getchar();
+            system("clear");
+            printf("please enter an account who you want to send:\n");
+            scanf("%s",recv_file.count);
+            getchar();
+            printf("please enter an absolute path to send:\n");
+            scanf("%s",recv_file.path);
+            pp_tmp=pthread_create(&pp_tmp,NULL,send_file,&recv_file);
+            pthread_detach(pp_tmp);//设置为分离状态　防止阻塞主线程或者浪费资源(未被清理)
 			break;
 		}
 	} while ('E' != choice && 'e' != choice); 
     } 
     List_Destroy(head, node_friend_t);//删除好友链表
+    List_Destroy(group_head,node_group_t);
+    List_Destroy(Message_BOX,node_messages_t);
     close(conn_fd);
     return 0;
 }
