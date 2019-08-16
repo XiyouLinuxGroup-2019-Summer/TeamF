@@ -327,13 +327,39 @@ int login_client(int conn_fd,char *username)
         List_AddTail(group_messages[mp_group[atoi(tmp.recv_Acount)]],cur);
 
         //分配群成员链表
-        if(!pp[atoi(tmp.send_Account)])
+        printf(" 成员                         %s\n",tmp.send_Account);
+        
+/*         if(pp[atoi(tmp.send_Account)]==0)  //有bug　一个成员只能在所有群中加载一次
         {
             pp[atoi(tmp.send_Account)]++;
+            printf(" 成员                         :::%s\n",tmp.recv_Acount);
             list_member_t cdr=(list_member_t)malloc(sizeof(node_member_t));
             strcpy(cdr->account,tmp.send_Account);//其他消息并没有
             //printf("成员 %s\n",cdr->account);
             List_AddTail(member[mp_group[atoi(tmp.recv_Acount)]],cdr);
+        } */
+
+        //保证每一个群每个号只出现一次
+        list_member_t cdr=(list_member_t)malloc(sizeof(node_member_t));
+        int lzl=0;
+        //printf("群账号　%s\n",tmp.recv_Acount);
+        List_ForEach(member[mp_group[atoi(tmp.recv_Acount)]],cdr)
+        {
+            if(!strcmp(cdr->account,tmp.send_Account))
+            {
+                lzl=1;
+                break;
+            }
+        }
+        //原因在于cdr有malloc后分配的值　所以其值其实始终相当于消息链表的头结点　所以插入后一直没有值
+        //其实最简单的就是不给cur分配内存空间
+        free(cdr);
+        if(!lzl)
+        {
+            list_member_t cudr=(list_member_t)malloc(sizeof(node_member_t));
+            //这里插入不可以使用上面的cdr 刚开始没写free时也不可以　链表会乱
+            strcpy(cudr->account,tmp.send_Account);//其他消息并没有
+            List_AddTail(member[mp_group[atoi(tmp.recv_Acount)]],cudr);
         }
     }
     

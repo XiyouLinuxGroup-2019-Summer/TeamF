@@ -609,12 +609,13 @@ int Send_group_messages_server(recv_t *sock,MYSQL *mysql)//需要发送给每一
         row=mysql_fetch_row(result);
         if(strcmp(row[1],sock->send_Account)) //发送给群内成员　不包括自己
         {
+            printf("%s %s \n",row[1],sock->send_Account);
             int flag = 0;
             int conn_fd=0;
             list_status_t curps;
             List_ForEach(status_per,curps)
             {
-                if(!strcmp(curps->account,sock->send_Account))
+                if(!strcmp(curps->account,row[1]))
                 {
                     conn_fd=curps->fdd;
                     break;
@@ -624,10 +625,10 @@ int Send_group_messages_server(recv_t *sock,MYSQL *mysql)//需要发送给每一
             bzero(&package,sizeof(recv_t));   //清空缓冲区
 
             package.type=SEND_GROUP_MESSAGES;//发送至消息盒子
-            strcpy(package.send_Account,sock->send_Account);
+            strcpy(package.send_Account,sock->recv_Acount); //第二个参数是群号
             strcpy(package.message,sock->message);
 
-            if(send(sock->send_fd,&package,sizeof(recv_t),0)<0)
+            if(send(conn_fd,&package,sizeof(recv_t),0)<0)
             perror("error in send group messages\n");
         }
     }

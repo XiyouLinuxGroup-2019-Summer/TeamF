@@ -96,7 +96,7 @@ int main(int argc,char **argv)  //暂时无全局变量
     pthread_create(&pth1,NULL,method_client,NULL); //开一个线程专门收包
 	char choice;
 	 do { 
-		system("clear");
+		//system("clear");
 		printf("\n\n====================================================================\n");
 		printf("\n========您好，[%s]先生/女士,欢迎来到zhaolonga-happychat=========\n",username);
 		printf("\n==================================================================\n");
