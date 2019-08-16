@@ -40,9 +40,11 @@ void *deal(void *recv_pack) {
 				} else {
                     memset(pack->data.write_buff, 0, sizeof(pack->data.write_buff));
                     strcpy(pack->data.write_buff, "good");
-                    if (send(pack->data.recv_fd, pack, sizeof(PACK), 0) < 0) {
+                    int ret;
+                    if ((ret = send(pack->data.recv_fd, pack, sizeof(PACK), 0)) < 0) {
                         my_err("send", __LINE__);
                     }
+                    printf("##%d\n", ret);
                     while (tmp != NULL) {
                         if (tmp->recv_account == pack->data.send_account) {
                             break;
