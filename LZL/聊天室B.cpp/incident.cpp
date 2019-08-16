@@ -1058,7 +1058,7 @@ int recv_file(recv_t *package) //在消息盒子中接收到包　把数据写�
 
     perror("Error opening file!");
 
-    if(write(fd,package->message,MAX_RECV)==-1)
+    if(write(fd,package->message,strlen(package->message))==-1)
     {
         perror("Error writing file!");
         return -1;
@@ -1445,11 +1445,13 @@ void *send_file(void *arg) //发送文件时重新开一个线程
 
     printf("给%s发送消息\n",recv_file->count);
 
-    while(read(fd,package.message,MAX_RECV)>0) //循环开始发送文件
+    while(read(fd,package.message,MAX_RECV-1)>0) //循环开始发送文件
     {
         strcpy(package.message_tmp,recv_file->path);
         strcpy(package.recv_Acount,recv_file->count);
         package.type=SEND_FILE;
+        //printf("%s\n",package.message);
+        strcat(package.message,"\0");
         if(send(fact_fd,&package,sizeof(recv_t),0)<0)
         perror("error in send file\n");
         bzero(&package.message,MAX_RECV);//清空缓冲区
