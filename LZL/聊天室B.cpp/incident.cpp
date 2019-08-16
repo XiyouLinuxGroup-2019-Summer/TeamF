@@ -10,6 +10,7 @@
 #include<stdio.h>
 #include"Data.h"
 #include<map>
+#include<stack>
 #include<sys/types.h>
 #include<sys/stat.h>
 #include<fcntl.h>
@@ -595,11 +596,13 @@ int Chat(char *account)//参数为好友账号
                     List_FreeNode(curos); //这个消息已经载入消息链表　可以删除了
                 }
             }
-            List_ForEach(Messages[mp[atoi(account)]],curos)
+/*             List_ForEach(Messages[mp[atoi(account)]],curos)
             {
                 cout << curos->messages << endl;
-            }
+            } */
 
+            printf("\001\033[1m\002");
+            printf("\033[34m");
             printf(
                     "\n==================================================================\n");
             printf(
@@ -608,20 +611,23 @@ int Chat(char *account)//参数为好友账号
             printf(
                     "------------------------------------------------------------------\n");
                     //printf("((((%d,%s,%d\n",mp[atoi(acc_tmp)],acc_tmp,strlen(acc_tmp));
+            printf("\001\033[0m\002");
             Paging_ViewPage_ForEach(Messages[mp[atoi(acc_tmp)]], paging, node_messages_t, pos, i){
                 //链表中名称必为好友昵称
                 //printf("%s :%s :\n",pos->nickname,fact_name);
                 if(strcmp(pos->nickname,fact_name))//怎么比都可以
                 {
-                    printf("%-65s\n",pos->nickname);
-                    printf("%-65s\n",pos->messages);
+                    printf("\033[32m %-65s \033[0m \n",pos->nickname);
+                    printf("\033[32m %-65s \033[0m \n",pos->messages);
                 }else{
-                    printf("%65s\n",fact_name);
-                    printf("%65s\n",pos->messages);
+                    printf("\033[35m %65s \033[0m \n",fact_name);
+                    printf("\033[35m %65s \033[0m \n",pos->messages);
                 }
                 putchar('\n');
             }
 
+            printf("\001\033[1m\002");
+            printf("\033[34m");
             printf(
                     "------- Total Records:%2d ----------------------- Page %2d/%2d ----\n",
                     paging.totalRecords, Pageing_CurPage(paging),
@@ -633,6 +639,7 @@ int Chat(char *account)//参数为好友账号
             printf(
                     "\n==================================================================\n");
             printf("Your Choice:");
+            printf("\001\033[0m\002");
             fflush(stdin);
             scanf("%c", &choice);
             getchar();
@@ -1049,10 +1056,12 @@ int recv_file(recv_t *package) //在消息盒子中接收到包　把数据写�
 {
     int fd=0;                               //这个参数是为了说明新文件的权限
     char buf[MAX_PATH_NAME];
-
     bzero(buf,sizeof(buf));
+    //若果输入路径　简单的前面加前缀就不可以
     strcat(buf,"tmp");
     strcat(buf,package->message_tmp);
+
+    //printf("保存在这里　-> %s\n",buf);
     if((fd=open(buf,O_CREAT|O_RDWR|O_APPEND,S_IRWXU))==-1) //第三个参数的意思就是可读可写可执行
     //把接收到的文件存入当前目录下
 
@@ -1122,6 +1131,8 @@ int show_group_member(char *account)
             Paging_Locate_FirstPage(member[mp_group[atoi(account)]], paging);
             system("clear");
             printf("链表长度：%d\n",paging.totalRecords);
+            printf("\001\033[1m\002");
+            printf("\033[34m");
             printf(
                     "\n==============================================================\n");
             printf(
@@ -1146,6 +1157,7 @@ int show_group_member(char *account)
             printf(
                     "\n==================================================================\n");
             printf("Your Choice:");
+            printf("\001\033[0m\002");
             fflush(stdin);
             scanf("%c", &choice);
             getchar();
@@ -1259,27 +1271,32 @@ int Group_Chat(char *account)//参数为想参与群聊的群号
                 cout << cur->messages << endl;
             } */
 
+            printf("\001\033[1m\002");
+            printf("\033[34m");
             printf(
                     "\n==================================================================\n");
             printf(
                     "**************************** %s ****************************\n",account);//有消息可以用这个　Messages[mp[account]]->nicknam
             printf(
                     "------------------------------------------------------------------\n");
+            printf("\001\033[0m\002");
                     //printf("((((%d,%s,%d\n",mp[atoi(acc_tmp)],acc_tmp,strlen(acc_tmp));
             Paging_ViewPage_ForEach(group_messages[mp_group[atoi(account)]], paging, node_group_messages_t, pos, i){
                 //链表中名称必为好友昵称
                 //printf("%s :%s :\n",pos->nickname,fact_name);
                 if(strcmp(pos->nickname,fact_name))//怎么比都可以
                 {
-                    printf("%-65s\n",pos->nickname);
-                    printf("%-65s\n",pos->messages);
+                    printf("\033[32m %-65s \033[0m \n",pos->nickname);
+                    printf("\033[32m %-65s \033[0m \n",pos->messages);
                 }else{
-                    printf("%65s\n",fact_name);
-                    printf("%65s\n",pos->messages);
+                    printf("\033[35m %65s \033[0m \n",fact_name);
+                    printf("\033[35m %65s \033[0m \n",pos->messages);
                 }
                 putchar('\n');
             }
 
+            printf("\001\033[1m\002");
+            printf("\033[34m");
             printf(
                     "------- Total Records:%2d ----------------------- Page %2d/%2d ----\n",
                     paging.totalRecords, Pageing_CurPage(paging),
@@ -1292,6 +1309,7 @@ int Group_Chat(char *account)//参数为想参与群聊的群号
                     "\n==================================================================\n");
             printf("Your Choice:");
             fflush(stdin);
+            printf("\001\033[0m\002");
             scanf("%c", &choice);
             getchar();
             fflush(stdin);
@@ -1435,7 +1453,7 @@ void *send_file(void *arg) //发送文件时重新开一个线程
         getchar();
         return 0;
     }
-
+    printf("%s\n",recv_file->path);
     if((fd=open(recv_file->path,O_RDONLY))==-1){//确定文件已经存在
         perror("open file error！\n");
         printf("please enter key to quit!\n");
