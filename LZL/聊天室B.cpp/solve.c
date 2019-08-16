@@ -13,11 +13,11 @@
 #include"Data.h"
 list_status_t status_per;
 
-void send_data(int conn_fd,const char *string) //传入一个连接套接字和字符串数据   
+void send_data(int conn_fd,const char *string,int len) //传入一个连接套接字和字符串数据    
 {
     int ree=0;
-    printf("%s\n",string);
-    if((ree=send(conn_fd,string,strlen(string),0))<0)
+    //if((ree=send(conn_fd,string,strlen(string),0))<0)
+    if((ree=send(conn_fd,string,len,0))<0)
     {
         perror("send");
         //exit(1);
@@ -55,7 +55,7 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     int row_in_messages_box=0;
     if(!strcmp(sock->message,row[1]))//在数据库中检测账号密码是否匹配 返回名称　密码在message中
     {
-        send_data(sock->send_fd,row[3]);//发送名称
+        send_data(sock->send_fd,row[3],MAX_USERNAME);//发送名称
         sprintf(buf,"update Data set status = \"1\" where Account = \"%s\"",sock->send_Account);
         mysql_query(mysql,buf); //改变登录状态
         //查询消息盒子 把离线期间发送给send_account的消息提取并发送
@@ -72,11 +72,11 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         if((row_in_messages_box=mysql_num_rows(res))==0)
         {
             printf("已发送1！\n");
-            send_data(sock->send_fd,BOX_NO_MESSAGES);
+            send_data(sock->send_fd,BOX_NO_MESSAGES,MAX_RECV);
         }else
         {
             printf("已发送2！\n");
-            send_data(sock->send_fd,BOX_HAVE_MESSAGS);
+            send_data(sock->send_fd,BOX_HAVE_MESSAGS,MAX_RECV);
         }
         //printf("标志消息盒子　是否有数据的包发送成功  %d\n",row_in_messages_box);
         //开始发送消息
@@ -109,7 +109,7 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         //printf("全部信息发送完成\n");
     }
     else 
-    send_data(sock->send_fd,"@@@");//密码账号不匹配　返回错误
+    send_data(sock->send_fd,"@@@",MAX_USERNAME);//密码账号不匹配　返回错误
     mysql_free_result(res);
 
     //发送好友列表的函数所需要的值登录函数中已设置　所以这个数据包可直接使用　
@@ -133,11 +133,11 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     //printf("运行到发送消息标记包\n");
     if((row_in_messages_record=mysql_num_rows(resu))==0)
     {
-        send_data(sock->send_fd,BOX_NO_MESSAGES);
+        send_data(sock->send_fd,BOX_NO_MESSAGES,MAX_RECV);
         //return 0; //不退出会在后面多发一个包
     }else
     {
-        send_data(sock->send_fd,BOX_HAVE_MESSAGS);
+        send_data(sock->send_fd,BOX_HAVE_MESSAGS,MAX_RECV);
     }
     //printf("row_dddin %d\n",row_in_messages_record);
     while(row_in_messages_record--)
@@ -256,7 +256,7 @@ int register_server(recv_t * sock,MYSQL *mysql)
     sprintf(account,"%d",atoi(row[0])+1);
     sprintf(buf,"update Account set Account = \"%s\" where Account = \"%s\"",account,row[0]);
     mysql_query(mysql,buf);
-    send_data(sock->send_fd,account);//注册时返回一个账号                                       //存一次昵称
+    send_data(sock->send_fd,account,MAX_ACCOUNT);//注册时返回一个账号                                       //存一次昵称
     sprintf(buf,"insert into Data values('%s','%s','%s','%s',0,%d)",
     account,sock->message,sock->message_tmp,sock->recv_Acount,sock->send_fd);
     printf("%s\n",buf);
@@ -278,10 +278,10 @@ int Retrieve_server(recv_t *sock,MYSQL *mysql)
     {
         sprintf(buf,"update Data set password = \"%s\" where Account = \"%s\"",sock->message,sock->send_Account);
         mysql_query(mysql,buf);
-        send_data(sock->send_fd,"y");
+        send_data(sock->send_fd,"y",32);
     }
     else 
-    send_data(sock->send_fd,"@@@");
+    send_data(sock->send_fd,"@@@",32);
 }
 
 int add_friend_server(recv_t *sock,MYSQL *mysql)

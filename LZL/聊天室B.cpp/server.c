@@ -17,7 +17,7 @@ int main()
 {
     List_Init(status_per,node_status_t);
     MYSQL mysql; 
-    mysql_init(&mysql);  //初始化一个句柄 
+    mysql_init(&mysql);  //初始化一个句柄  
     mysql_library_init(0,NULL,NULL);//初始化数据库
     mysql_real_connect(&mysql,"127.0.0.1","root","lzl213260C","Login_Data",0,NULL,0);//连接数据库
     mysql_set_character_set(&mysql,"utf8");//调整为中文字符

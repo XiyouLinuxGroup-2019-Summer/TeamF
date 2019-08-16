@@ -12,7 +12,7 @@
 #include<map>
 #include<iostream>
 using namespace std;
-char gl_account[MAX_ACCOUNT]; //以一个全局变量记录账号
+char gl_account[MAX_ACCOUNT]; //以一个全局变量记录账号 
 int  fact_fd;          //记录服务器套接字
 char fact_name[MAX_USERNAME];
 int tt=1;  //更新映射表主键
@@ -60,6 +60,29 @@ int my_recv(int conn_fd,char *data_buf,int len)
     len_remain--;    //回车结束符号
     phread++;        //为了与上面进行对应
     return i;
+}
+
+//因为这里用了char* 所以所有的地方都要进行强转
+int my_recv_tmp(int conn_fd,char *data_buf,int len)
+{
+        char *p = data_buf;
+        memset(data_buf, 0, len);
+        while (len > 0) {
+                ssize_t n = recv(conn_fd, p, len, 0);
+                if (n < 0)
+                    perror("error in recv\n");
+                else if (n == 0)
+                    printf("接收到包大小为零\n");
+                else {
+                        printf("recv %zd bytes: %s\n", n, p);
+                        p += n;
+                        len -= n;
+                }
+        }
+        //因为tcp是流式的　一个包可能被分成几个小段来发送
+        //所以必须要用一个循环来接收　保证包的大小
+        p[len]='\0';
+        return len;
 }
 
 int get_userinfo(char *buf,int len)

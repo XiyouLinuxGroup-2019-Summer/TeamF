@@ -15,7 +15,7 @@ int main(int argc,char **argv)  //暂时无全局变量
     char register_tmp[MAX_ACCOUNT];
     recv_t Package;//登录请求时要发的包
 
-    List_Init(head,node_friend_t);     //初始化好友链表
+    List_Init(head,node_friend_t);     //初始化好友链表 
     List_Init(group_head,node_group_t); //初始化群链表　其中包含全部群  
 
     memset(&serv_addr,0,sizeof(struct sockaddr_in));
