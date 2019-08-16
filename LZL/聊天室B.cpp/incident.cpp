@@ -1127,6 +1127,7 @@ int show_group_member(char *account)
 int send_group_messages(char *account,char *Message)//第一个参数为群号　第二个参数为消息
 {
     recv_t packge;
+    bzero(&packge,sizeof(packge));
     packge.type=SEND_GROUP_MESSAGES;
     strcpy(packge.message,Message);//消息
     strcpy(packge.recv_Acount,account);//群号

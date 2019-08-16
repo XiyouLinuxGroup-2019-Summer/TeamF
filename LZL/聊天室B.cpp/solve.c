@@ -440,7 +440,16 @@ int send_messages_server(recv_t *sock,MYSQL *mysql)
     mysql_query(mysql,buf);
     MYSQL_RES *result = mysql_store_result(mysql);
     MYSQL_ROW row=mysql_fetch_row(result);
-    if(atoi(row[4])==1)//在线　直接发送　消息盒子接收 //其中消息进入后直接载入　不区分已读未读
+    list_status_t cuurps;
+    int flagg=0;
+    List_ForEach(status_per,cuurps)
+    {
+        if(!strcmp(sock->recv_Acount,cuurps->account)){
+            flagg=cuurps->fdd;
+            break;
+        }
+    }
+    if(flagg)//在线　直接发送　消息盒子接收 //其中消息进入后直接载入　不区分已读未读
     {
         recv_t package;
         strcpy(package.send_Account,sock->send_Account);
@@ -449,20 +458,7 @@ int send_messages_server(recv_t *sock,MYSQL *mysql)
         strcpy(package.message,sock->message);
         package.type=SEND_MESSAGES;
 
-        int flag=0;
-        list_status_t curps;
-        List_ForEach(status_per,curps)
-        {
-            printf("%s %s\n",sock->recv_Acount,curps->account);
-            if(!strcmp(sock->recv_Acount,curps->account))
-            {
-                printf("daodai!\n");
-                flag=curps->fdd;//在在线链表中寻找套接字
-                break;
-            }
-        }
-
-        if(send(flag,&package,sizeof(recv_t),0)<0) 
+        if(send(flagg,&package,sizeof(recv_t),0)<0) 
         {
             perror("error in server send friend message\n");
         }
@@ -591,14 +587,51 @@ int Kicking_server(recv_t *sock,MYSQL *mysql)
     mysql_query(mysql,buf);
 }
 
-int Send_group_messages_server(recv_t *sock,MYSQL *mysql)
+int Send_group_messages_server(recv_t *sock,MYSQL *mysql)//需要发送给每一个在线的好友
 {
     char buf[256];
+    bzero(&buf,sizeof(buf));
     sprintf(buf,"insert into group_messsges_list values('%s','%s','%s','%s','%d')",
     sock->recv_Acount,sock->send_Account,sock->message_tmp,sock->message,3);
     mysql_query(mysql,buf);
+    //先把消息保存在服务器数据库中
+
+    //然后把消息发送给每一个在线的好友
+    bzero(&buf,sizeof(buf));
+    sprintf(buf,"select *from group_list where group_account = '%s'",sock->recv_Acount);
+    mysql_query(mysql,buf);
+    MYSQL_RES *result = mysql_store_result(mysql);
+    int ret=mysql_num_rows(result);
+    MYSQL_ROW row;
+    recv_t package;
+    while(ret--)
+    {
+        row=mysql_fetch_row(result);
+        if(strcmp(row[1],sock->send_Account)) //发送给群内成员　不包括自己
+        {
+            int flag = 0;
+            int conn_fd=0;
+            list_status_t curps;
+            List_ForEach(status_per,curps)
+            {
+                if(!strcmp(curps->account,sock->send_Account))
+                {
+                    conn_fd=curps->fdd;
+                    break;
+                }
+            }
+            if(!conn_fd) continue; //此成员不在线
+            bzero(&package,sizeof(recv_t));   //清空缓冲区
+
+            package.type=SEND_GROUP_MESSAGES;//发送至消息盒子
+            strcpy(package.send_Account,sock->send_Account);
+            strcpy(package.message,sock->message);
+
+            if(send(sock->send_fd,&package,sizeof(recv_t),0)<0)
+            perror("error in send group messages\n");
+        }
+    }
     return 0;
-    //其实群这里写的不好　其实可以做到对于所有用户来说一次人改动　全部更新　
 }
 
 int *solve(void *arg)
