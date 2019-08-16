@@ -568,9 +568,9 @@ int Chat(char *account)//参数为好友账号
     //遍历消息链表
 	paging.offset = paging.totalRecords;
 	paging.pageSize = MESSADES_PAGE_SIZE;
-
-            while(1){
             Paging_Locate_FirstPage(Messages[mp[atoi(account)]], paging);
+            while(1){
+    
             system("clear");
             printf("链表长度：%d\n",paging.totalRecords);
 
@@ -1136,13 +1136,13 @@ int show_group_member(char *account)
                 case 'p':
                 case 'P':
                     if (!Pageing_IsFirstPage(paging)) {
-                        Paging_Locate_OffsetPage(group_head, paging, -1, node_group_t);
+                        Paging_Locate_OffsetPage(member[mp_group[atoi(account)]], paging, -1, node_member_t);
                     }
                     break;
                 case 'n':
                 case 'N':
                     if (!Pageing_IsLastPage(paging)) {
-                        Paging_Locate_OffsetPage(group_head, paging, 1, node_group_t);
+                        Paging_Locate_OffsetPage(member[mp_group[atoi(account)]], paging, 1, node_member_t);
                     }
                     break;
             }
@@ -1196,10 +1196,9 @@ int Group_Chat(char *account)//参数为想参与群聊的群号
     //遍历消息链表
 	paging.offset = paging.totalRecords;
 	paging.pageSize = MESSADES_PAGE_SIZE;
-
+    Paging_Locate_FirstPage(group_messages[mp_group[atoi(account)]], paging);
             while(1){
             flag=0;//退出此函数标记
-            Paging_Locate_FirstPage(group_messages[mp_group[atoi(account)]], paging);
             system("clear");
             printf("链表长度：%d\n",paging.totalRecords);
 
@@ -1217,10 +1216,10 @@ int Group_Chat(char *account)//参数为想参与群聊的群号
                     List_FreeNode(curos); //这个消息已经载入消息链表　可以删除了
                 }
             }
-            List_ForEach(group_messages[mp_group[atoi(account)]],cur)
+/*             List_ForEach(group_messages[mp_group[atoi(account)]],cur)
             {
                 cout << cur->messages << endl;
-            }
+            } */
 
             printf(
                     "\n==================================================================\n");
@@ -1275,13 +1274,13 @@ int Group_Chat(char *account)//参数为想参与群聊的群号
                 case 'p':
                 case 'P':
                     if (!Pageing_IsFirstPage(paging)) {
-                        Paging_Locate_OffsetPage(Messages[mp[atoi(acc_tmp)]], paging, -1, node_messages_t);
+                        Paging_Locate_OffsetPage(group_messages[mp_group[atoi(account)]], paging, -1, node_group_messages_t);
                     }
                     break;
                 case 'n':
                 case 'N':
                     if (!Pageing_IsLastPage(paging)) {
-                        Paging_Locate_OffsetPage(Messages[mp[atoi(acc_tmp)]], paging, 1, node_messages_t);
+                        Paging_Locate_OffsetPage(group_messages[mp_group[atoi(account)]], paging, 1, node_group_messages_t);
                     }
                     break;
                 case 'r':

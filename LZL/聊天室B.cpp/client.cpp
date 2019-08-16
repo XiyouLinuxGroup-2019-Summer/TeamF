@@ -60,7 +60,7 @@ int main(int argc,char **argv)  //暂时无全局变量
     int ans=0;      //巧妙的地方在于在登录时做了消息离线处理　登录一完成即显示离线消息　数据库实现
                     //所以后面主功能块可以开一个线程专门收消息　与前面并不冲突
     do{
-        system("clear");
+        //system("clear");
         printf("Register      [R]     Enter   [E]\n");
         printf("Back_password [B]     Quit    [Q]\n");
         scanf("%c",&ch);
