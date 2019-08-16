@@ -124,14 +124,14 @@ int main()
                         printf("一次n");
                         if(curps->fdd==events[i].data.fd){
                             sprintf(buf_tmp,"update Data set status = '0' where Account = '%s'",curps->account);
-                            printf("%s\n",buf_tmp);
+                            //printf("%s\n",buf_tmp);
                             mysql_query(&mysql,buf_tmp); //改变登录状态
                             List_DelNode(curps); //不正常退出修改状态信息
                             break;
                         }
                     }
                     char buf[128];
-                    printf("The client with IP %d is disconnected\n",events[i].data.fd);
+                    //printf("The client with IP %d is disconnected\n",events[i].data.fd);
                     sprintf(buf,"select *from Data where send_recv_fd = %d",events[i].data.fd);
                     mysql_query(&mysql,buf);
                     MYSQL_RES *result = mysql_store_result(&mysql);

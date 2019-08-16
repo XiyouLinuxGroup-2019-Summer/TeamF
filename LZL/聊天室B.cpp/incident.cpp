@@ -33,7 +33,7 @@ list_group_messages_t group_messages[1024];//每一个群中的消息链表
 
 
 
-int my_recv(int conn_fd,char *data_buf,int len)
+int my_recv(int conn_fd,char *data_buf,int len) //这个可以参考　也很巧妙
 {
     static char recv_buf[BUFSIZ];  //8192  
     static char *phread;
@@ -66,6 +66,7 @@ int my_recv(int conn_fd,char *data_buf,int len)
 int my_recv_tmp(int conn_fd,char *data_buf,int len)
 {
         char *p = data_buf;
+        printf("     需要接收  %d\n",len);
         memset(data_buf, 0, len);
         while (len > 0) {
                 ssize_t n = recv(conn_fd, p, len, 0);
@@ -79,6 +80,7 @@ int my_recv_tmp(int conn_fd,char *data_buf,int len)
                         len -= n;
                 }
         }
+
         //因为tcp是流式的　一个包可能被分成几个小段来发送
         //所以必须要用一个循环来接收　保证包的大小
         p[len]='\0';
@@ -132,8 +134,12 @@ int FetchAll_for_Friend_List()
     int ans=0;
     while(1)
     {
-        if(recv(fact_fd,&pacage,sizeof(recv_t),0)<0)
-        perror("error in recv\n");//收包
+        printf("好友列表　%d\n",sizeof(recv_t));
+        //if(my_recv_tmp(fact_fd,(char*)&pacage,sizeof(recv_t))<0)
+        //perror("error in recv\n");//收包
+        int ret = recv(fact_fd,&pacage,sizeof(pacage),MSG_WAITALL);
+       // pacage=(recv_t)pacage;
+        printf(":::::收到好友包 %s %d\n",pacage.message,pacage.type);
 
         if(pacage.type==EOF_OF_BOX)
         break;//接收到EOF结束符　退出接收循环
@@ -173,7 +179,7 @@ int login_client(int conn_fd,char *username)
             return 0;  //错误退出
         }
         //如果登录请求正确
-        if((ret=my_recv(conn_fd,username,MAX_USERNAME))<0) //默认阻塞
+        if((ret=my_recv_tmp(conn_fd,username,MAX_USERNAME))<0) //默认阻塞
         {
             perror("error in my_recv\n");
             exit(1);
@@ -188,8 +194,8 @@ int login_client(int conn_fd,char *username)
     strcpy(fact_name,username);//给全局变量赋值
     if(number==-1) return 0;
     //登录成功以后开始接收离线消息盒子里的消息
-    my_recv(conn_fd,buf,MAX_RECV);
-    if(!strcmp(buf,BOX_NO_MESSAGES))
+    my_recv_tmp(conn_fd,buf,14);
+    if(buf[0]=='@')
     printf("消息盒子无记录！\n");//登陆成功 离线消息盒子无记录　进入服务界面
     else
     {
@@ -198,7 +204,7 @@ int login_client(int conn_fd,char *username)
         //printf("进行到循环\n");
         while(1)
         {
-            if(recv(conn_fd,&box,sizeof(box),0)<0)
+            if(my_recv_tmp(conn_fd,(char*)&box,sizeof(box))<0)
             perror("error in recv\n");
             if(box.type==EOF_OF_BOX)
             {
@@ -236,16 +242,18 @@ int login_client(int conn_fd,char *username)
     //好友关系记录发送完成　结尾为一个结尾包　
     //printf("好友列表加载完成\n");
     //接收到一个标记包　表示是否有消息记录
-    if(recv(conn_fd,buf,sizeof(buf),0)<0)
+    printf("是否有消息 %d\n",sizeof(buf));
+    if(my_recv_tmp(conn_fd,buf,14)<0)
     perror("error in client recv messages record\n");
-    if(!strcmp(buf,BOX_NO_MESSAGES))
+    if(buf[0]=='@')
     printf("消息记录无记录！\n");
     else{
         //若有消息记录开始加载
         Box_t box;
         while(1)
         {
-            if(recv(conn_fd,&box,sizeof(Box_t),0)<0)
+            printf("开始接收消息　%d\n",sizeof(Box_t));
+            if(my_recv_tmp(conn_fd,(char*)&box,sizeof(Box_t))<0)
             perror("error in recv\n");
 /*             printf("%s\n",box.message);
             getchar(); */
@@ -278,7 +286,7 @@ int login_client(int conn_fd,char *username)
     int yyy=0;
     while(1)
     {   
-        if(recv(conn_fd,&tmp,sizeof(recv_t),0)<0)
+        if(my_recv_tmp(conn_fd,(char*)&tmp,sizeof(recv_t))<0)
         perror("error in recv\n");
         if(tmp.type==EOF_OF_BOX)
         break;
@@ -299,7 +307,7 @@ int login_client(int conn_fd,char *username)
     //这个接收包的过程可以对群消息和群成员的链表进行填充
     while(1){
         bzero(&tmp,sizeof(recv_t)); //清空结构体　防止隐性错误
-        if(recv(conn_fd,&tmp,sizeof(recv_t),0)<0)
+        if(my_recv_tmp(conn_fd,(char*)&tmp,sizeof(recv_t))<0)
         perror("error in recv\n");
         if(tmp.type==EOF_OF_BOX)
         break; //接收到结束包
@@ -364,7 +372,7 @@ int register_client(int conn_fd,char *account)  //注册请求　返回一个账
         perror("error in register send\n");
         return 0;
     }
-    if((ret=my_recv(conn_fd,account,MAX_ACCOUNT))<0)
+    if((ret=my_recv_tmp(conn_fd,account,MAX_ACCOUNT))<0)
     {
         perror("error in register send\n");
         return 0;
@@ -410,7 +418,7 @@ int Retrieve_client(int conn_fd)
         perror("error in retrieve send\n");
         return 0;
     }
-    if((ret=my_recv(conn_fd,flag,32))<0)
+    if((ret=my_recv_tmp(conn_fd,flag,32))<0)
     {
         perror("error in retrieve send\n");
         return 0;
@@ -1013,7 +1021,7 @@ void *method_client(void *arg)
     recv_t buf;
     while(1)
     {
-        if(recv(fact_fd,&buf,sizeof(recv_t),0)<0)
+        if(my_recv_tmp(fact_fd,(char*)&buf,sizeof(recv_t))<0)
         perror("error in recv\n");
         printf("消息盒子收到消息　%d %s\n",buf.type,buf.send_Account);
         list_messages_t temp = (list_messages_t)malloc(sizeof(node_messages_t));
