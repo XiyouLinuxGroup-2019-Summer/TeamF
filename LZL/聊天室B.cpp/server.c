@@ -13,6 +13,7 @@
 #include<mysql/mysql.h>
 #include"solve.h" 
 
+int fffffff;
 int main()
 {
     List_Init(status_per,node_status_t);
@@ -75,7 +76,7 @@ int main()
         nfds = epoll_wait(epfd,events,EVENTS_MAX_SIZE,-1);//等待可写事件
         for(int i=0;i<nfds;i++)
         {
-            printf(" The event type is %d\n",events[i].events);
+            //printf(" The event type is %d\n",events[i].events);
             connect_size++;
             if(events[i].data.fd==sock_fd)       //服务器套接字接收到一个连接请求
             {
@@ -88,7 +89,7 @@ int main()
                 conn_fd=accept(events[i].data.fd,(struct sokcaddr*)&cli_addr,&cli_len);
                 //网络字节序转换成字符串输出
 
-                printf("accept a new client ! ip:%s\n",inet_ntoa(cli_addr.sin_addr));
+                printf("%d  accept a new client ! ip:%s\n",++fffffff,inet_ntoa(cli_addr.sin_addr));
 
                 if(conn_fd<=0)
                 {
@@ -131,7 +132,7 @@ int main()
                         }
                     }
                     char buf[128];
-                    //printf("The client with IP %d is disconnected\n",events[i].data.fd);
+                    printf("The client with IP %d is disconnected\n",events[i].data.fd);
                     sprintf(buf,"select *from Data where send_recv_fd = %d",events[i].data.fd);
                     mysql_query(&mysql,buf);
                     MYSQL_RES *result = mysql_store_result(&mysql);
@@ -158,8 +159,8 @@ int main()
                 temp->epfd=epfd;
                 temp->conn_fd=events[i].data.fd;
                 //printf("进入线程\n");
-                //pth1=pthread_create(&pth1,NULL,solve,temp);//开一个线程去判断任务类型从而执行 值传递
-                solve((void*)temp);
+                pth1=pthread_create(&pth1,NULL,solve,temp);//开一个线程去判断任务类型从而执行 值传递
+                //solve((void*)temp);
             }  
         }
     }

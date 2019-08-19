@@ -53,14 +53,19 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     mysql_query(mysql,buf);
     MYSQL_RES *result = mysql_store_result(mysql);
     MYSQL_ROW row=mysql_fetch_row(result);
-    printf("%s || %s\n",sock->message,row[1]);
+    //printf("%s || %s\n",sock->message,row[1]);
     mysql_free_result(result);
     MYSQL_RES *res=NULL;
     int row_in_messages_box=0;
+    char buf_for_error_in_password[MAX_USERNAME];
+    bzero(buf_for_error_in_password,MAX_USERNAME);
     if(!strcmp(sock->message,row[1]))//在数据库中检测账号密码是否匹配 返回名称　密码在message中
     {
         //printf("发送大小　:%d\n",MAX_USERNAME);
-        send_data(sock->send_fd,row[3],MAX_USERNAME);//发送名称
+        char send_name[MAX_USERNAME];
+        bzero(send_name,sizeof(send_name));
+        strcpy(send_name,row[3]);    //这个问题值得注意　包记得开大
+        send_data(sock->send_fd,send_name,MAX_USERNAME);//发送名称
         sprintf(buf,"update Data set status = \"1\" where Account = \"%s\"",sock->send_Account);
         mysql_query(mysql,buf); //改变登录状态
         //查询消息盒子 把离线期间发送给send_account的消息提取并发送
@@ -117,17 +122,22 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
         //printf("全部信息发送完成\n");
     }
     else 
-    send_data(sock->send_fd,"@@@",MAX_USERNAME);//密码账号不匹配　返回错误
+    {
+        strcpy(buf_for_error_in_password,"@@@@@@");
+        send_data(sock->send_fd,buf_for_error_in_password,MAX_USERNAME);//密码账号不匹配　返回错误
+        return 0;
+    }
     mysql_free_result(res);
 
     //发送好友列表的函数所需要的值登录函数中已设置　所以这个数据包可直接使用　
     //有效位为其中的　send_Account 与 send_fd 
     //谁发的　以及　套接字是多少
     //printf("函数进行到这里数据库查找数据\n");
+    
     List_friends_server(sock,mysql);
+    
     //printf("好友列表加载完成\n");
     //从消息记录中查找账号所对应的消息记录　标记位为ower_account
-
 
     //根据登陆者的账号在数据库中进行匹配
     sprintf(buf,"select *from messages_record where ower_account = '%s'",sock->send_Account);
@@ -194,10 +204,13 @@ int login(recv_t *sock,MYSQL *mysql)  //sock_fd是要被发送数据的套接字
     MYSQL_ROW rowwo;
     if((ddd=mysql_num_rows(res_tmp))==0) //群为零　也就不用发送消息记录了
     {
+        bzero(&tmp_tmp,sizeof(recv_t));
         tmp_tmp.type=NULL_OF_GROUP;//直接发送标记符
         //printf("发送标记为\n");
-        //printf("没有群　发送大小　:%d\n",sizeof(recv_t));
-        send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0); //客户端是一个while循环接收,所以一个足够
+        strcpy(tmp_tmp.message,"hello worldddddddddd");
+        //printf("没有群　发送大小　:%d  %d\n",sizeof(recv_t),tmp_tmp.type);
+        if(send(sock->send_fd,&tmp_tmp,sizeof(recv_t),0)<0) //客户端是一个while循环接收,所以一个足够
+        perror("error in send\n");
         return 0;
     }else{
         //printf("群不为零\n");
@@ -277,7 +290,7 @@ int register_server(recv_t * sock,MYSQL *mysql)
     send_data(sock->send_fd,account,MAX_ACCOUNT);//注册时返回一个账号                                       //存一次昵称
     sprintf(buf,"insert into Data values('%s','%s','%s','%s',0,%d)",
     account,sock->message,sock->message_tmp,sock->recv_Acount,sock->send_fd);
-    printf("%s\n",buf);
+    //printf("%s\n",buf);
     mysql_query(mysql,buf);
     mysql_free_result(result);
 }
@@ -352,7 +365,7 @@ int del_friend_server(recv_t *sock,MYSQL *mysql)
     unique_for_del[strlen(sock->recv_Acount)+strlen(sock->send_Account)+1]='\0';
     //printf("%s %s %s\n",sock->recv_Acount,sock->send_Account,unique_for_del);
     sprintf(buf,"delete from friend where del = '%s'",unique_for_del);
-    printf("%s\n",buf);
+    //printf("%s\n",buf);
     mysql_query(mysql,buf);
     return 1;
 }
@@ -413,7 +426,7 @@ int List_friends_server(recv_t *sock,MYSQL *mysql) //因为数据库表建的不
         res=mysql_store_result(mysql);
         wor=mysql_fetch_row(res);
         strcpy(packet.message,wor[3]);//昵称
-        strcpy(packet.message_tmp,row[1]);//好友账号
+        strcpy(packet.message_tmp,row[0]);//好友账号
         packet.conn_fd=atoi(wor[4]);//是否在线
         packet.send_fd=atoi(wor[5]);//好友套接字
         //printf("好友信息 %d %s %s\n",sizeof(recv_t),packet.message,packet.message_tmp);
@@ -472,12 +485,12 @@ int send_messages_server(recv_t *sock,MYSQL *mysql)
     
     sprintf(buf,"insert into messages_record values('%s','%s','%s','%s')",
     sock->send_Account,sock->send_Account,sock->recv_Acount,sock->message);
-    printf("%s\n",buf);
+    //printf("%s\n",buf);
     mysql_query(mysql,buf);
 
     sprintf(buf,"insert into messages_record values('%s','%s','%s','%s')",
     sock->recv_Acount,sock->send_Account,sock->recv_Acount,sock->message);
-    printf("%s\n",buf);
+    //printf("%s\n",buf);
     mysql_query(mysql,buf);//向消息记录数据库中加入消息　消息有两份
     //根据　ower_account 位来标记消息的所属者是谁　从而在登录时进行加载
 }
@@ -501,7 +514,7 @@ int register_group_server(recv_t *sock,MYSQL *mysql)
     account,sock->send_Account,sock->message,OWNER);//把这个群存入数据库
     mysql_query(mysql,buf);
 
-    printf("注册得到的群号: %s\n",account);
+    //printf("注册得到的群号: %s\n",account);
     strcpy(packet.send_Account,account);
     packet.type=REGISTER_GROUP;
     if(send(sock->send_fd,&packet,sizeof(recv_t),0)<0)
@@ -516,7 +529,7 @@ int Add_group_server(recv_t *sock,MYSQL *mysql)
     memset(account,0,sizeof(account));
     sprintf(buf,"insert into group_list values('%s','%s','%s','%d')",
     sock->message,sock->recv_Acount,sock->message_tmp,COMMON);//成员姓名
-    printf("%s\n",buf);
+    //printf("%s\n",buf);
     mysql_query(mysql,buf);
 
     bzero(&buf,sizeof(buf));
@@ -524,7 +537,7 @@ int Add_group_server(recv_t *sock,MYSQL *mysql)
     sprintf(buf,"insert into group_messsges_list values('%s','%s','%s','%s','%d')",
     sock->message,sock->recv_Acount,sock->message_tmp,"Hello everyone!",COMMON);//成员姓名
     
-    printf("%s\n",buf);
+    //printf("%s\n",buf);
 
 
     mysql_query(mysql,buf);
@@ -554,11 +567,11 @@ int Dissolve_server(recv_t *sock,MYSQL *mysql)//数据库中删除相关数据�
     int flag_recv=USERNAME;
     char buf[256];
     sprintf(buf,"delete from group_list where group_account = '%s'",sock->recv_Acount);
-    printf("%s\n",buf);
+    //printf("%s\n",buf);
     mysql_query(mysql,buf);
     //直接删除即可　已经在客户端检测过有权限　
     sprintf(buf,"delete from group_messsges_list where group_account = '%s'",sock->recv_Acount);
-    printf("%s\n",buf);
+    //printf("%s\n",buf);
     mysql_query(mysql,buf);
     //两张表中的数据都要删除
     //在这里其实可以改良　就是删除的时候给每一个成员发送一个包　消息盒子接收　随即删除
@@ -582,12 +595,12 @@ int Kicking_server(recv_t *sock,MYSQL *mysql)
     char buf[256];
     sprintf(buf,"delete from group_list where group_account = '%s' and member_account = '%s'",
     sock->message_tmp,sock->message);//删除掉此人
-    printf("%s\n",buf);
+    //printf("%s\n",buf);
     mysql_query(mysql,buf);
 
     sprintf(buf,"delete from group_messsges_list where group_account = '%s' and member_account = '%s'",
     sock->message_tmp,sock->message);//删除掉此人所有消息
-    printf("%s\n",buf);
+    //printf("%s\n",buf);
     mysql_query(mysql,buf);
 }
 
@@ -613,7 +626,7 @@ int Send_group_messages_server(recv_t *sock,MYSQL *mysql)//需要发送给每一
         row=mysql_fetch_row(result);
         if(strcmp(row[1],sock->send_Account)) //发送给群内成员　不包括自己
         {
-            printf("%s %s \n",row[1],sock->send_Account);
+            //printf("%s %s \n",row[1],sock->send_Account);
             int flag = 0;
             int conn_fd=0;
             list_status_t curps;
@@ -652,7 +665,7 @@ int Send_file_server(recv_t *recv_buf)
         printf("%s  %s\n",recv_buf->recv_Acount,ptr->account);
         if(!strcmp(recv_buf->recv_Acount,ptr->account)){
             conn_fd=ptr->fdd;  //证明在线
-            printf("找到在线\n");
+            //printf("找到在线\n");
             break;
         }
     }
@@ -732,7 +745,7 @@ int *solve(void *arg)
             printf("error\n");
             break;
     }
-    printf("end of pthread!\n");
+    //printf("end of pthread!\n");
     struct epoll_event ev;
     ev.data.fd = recv_buf->conn_fd;
     ev.events = EPOLLIN | EPOLLONESHOT;

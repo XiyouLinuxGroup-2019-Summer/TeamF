@@ -8,8 +8,8 @@
 
 #define MESSADES_PAGE_SIZE 15     //好友消息分页最大数
 #define FRIEND_PAGE_SIZE   5      //好友列表分页最大数 
-#define EVENTS_MAX_SIZE    1024   //epoll接收事件最大数 
-#define MAX_CONTECT_SIZE   1024   //服务器最大连接数
+#define EVENTS_MAX_SIZE    10240   //epoll接收事件最大数 
+#define MAX_CONTECT_SIZE   10240   //服务器最大连接数
 #define MAX_PATH_NAME      255    //文件名最长255 路径最长4096 
 #define MAX_USERNAME       64     //名称长度最大数
 #define MAX_ACCOUNT        32     //账号长度最大值

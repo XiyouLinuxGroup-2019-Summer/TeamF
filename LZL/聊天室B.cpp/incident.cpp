@@ -74,7 +74,7 @@ int my_recv_tmp(int conn_fd,char *data_buf,int len)
 {
         char *p = data_buf;
         //printf("     需要接收  %d\n",len);
-        memset(data_buf, 0, len);
+        //memset(data_buf, 0, len);
         while (len > 0) {
                 ssize_t n = recv(conn_fd, p, len, 0);
                 if (n < 0)
@@ -90,7 +90,7 @@ int my_recv_tmp(int conn_fd,char *data_buf,int len)
 
         //因为tcp是流式的　一个包可能被分成几个小段来发送
         //所以必须要用一个循环来接收　保证包的大小
-        p[len]='\0';
+        //p[len]='\0';
         return len;
 }
 
@@ -146,13 +146,14 @@ int FetchAll_for_Friend_List()
         //perror("error in recv\n");//收包
         int ret = recv(fact_fd,&pacage,sizeof(pacage),MSG_WAITALL);
        // pacage=(recv_t)pacage;
-        printf(":::::收到好友包 %s %d\n",pacage.message,pacage.type);
+        //printf(":::::收到好友包 %s %d\n",pacage.message,pacage.type);
 
         if(pacage.type==EOF_OF_BOX)
         break;//接收到EOF结束符　退出接收循环
 
         //利用数据包中数据对链表结点进行赋值
         list_friend_t temp=(list_friend_t)malloc(sizeof(node_friend_t));
+        bzero(temp,sizeof(node_friend_t));
         temp->status=pacage.conn_fd;//状态
         strcpy(temp->recv_account,pacage.message_tmp);//好友账号
         strcpy(temp->nickname,pacage.message);//昵称
@@ -179,6 +180,7 @@ int login_client(int conn_fd,char *username)
     system("clear");
     while(number--)  //三次机会
     {
+        system("clear");
         input_userinfo(&Package);
         if(send(conn_fd,&Package,sizeof(recv_t),0)<0)//发送一个登录请求
         {
@@ -186,6 +188,7 @@ int login_client(int conn_fd,char *username)
             return 0;  //错误退出
         }
         //如果登录请求正确
+        bzero(username,sizeof(username));
         if((ret=my_recv_tmp(conn_fd,username,MAX_USERNAME))<0) //默认阻塞
         {
             perror("error in my_recv\n");
@@ -194,7 +197,7 @@ int login_client(int conn_fd,char *username)
         //printf("%s::\n",username);
         if(username[0]==ERROR_IN_LOGIN)
         {
-            perror("account or password error!\n");
+            printf("account or password error!\n");
             continue;
         }else break;
     }
@@ -202,8 +205,13 @@ int login_client(int conn_fd,char *username)
     if(number==-1) return 0;
     //登录成功以后开始接收离线消息盒子里的消息
     my_recv_tmp(conn_fd,buf,14);
+    Box_t tttt;
+    bzero(&tttt,sizeof(Box_t));
     if(buf[0]=='@')
-    printf("消息盒子无记录！\n");//登陆成功 离线消息盒子无记录　进入服务界面
+    {
+        printf("消息盒子无记录！\n");//登陆成功 离线消息盒子无记录　进入服务界面
+        //recv(conn_fd,&tttt,sizeof(Box_t),MSG_WAITALL);
+    }
     else
     {
         Box_t box;
@@ -221,6 +229,8 @@ int login_client(int conn_fd,char *username)
             //printf("%s:\n%s\n",box.account,box.message); //显示离线发送来的信息
             if(box.type==ADD_FRIENDS)
             {
+                printf("\033[32m There is a friend request: \033[0m \n");
+                printf("%s:%s\n",box.account,box.message);
                 printf("YES   [Y]    NO    [N]\n");
                 scanf("%s",buffer);
                 getchar();
@@ -232,6 +242,10 @@ int login_client(int conn_fd,char *username)
                 strcpy(Package.send_Account,gl_account);//接收者　//一种新的事件　epoll来判断
                 if(send(conn_fd,&Package,sizeof(recv_t),0)<0)
                 perror("error in send friend request\n"); //根据首字母判断
+
+                list_friend_t fri = (list_friend_t)malloc(sizeof(node_friend_t));
+                strcpy(fri->send_account,Package.recv_Acount);
+                List_AddTail(head,fri);
             }
             
             //说明这是一个消息类型的包　服务器会先发　你发送的消息　后发你接收的消息
@@ -252,8 +266,12 @@ int login_client(int conn_fd,char *username)
     printf("是否有消息 %d\n",sizeof(buf));
     if(my_recv_tmp(conn_fd,buf,14)<0)
     perror("error in client recv messages record\n");
+    int pause_tmp_for_messages=0;
     if(buf[0]=='@')
-    printf("消息记录无记录！\n");
+    {
+        printf("消息记录无记录！\n");
+        pause_tmp_for_messages=1;
+    }
     else{
         //若有消息记录开始加载
         Box_t box;
@@ -285,16 +303,25 @@ int login_client(int conn_fd,char *username)
             }
         }
     }
-
+    if(pause_tmp_for_messages)
+    {
+        Box_t ttttt;
+        bzero(&ttttt,sizeof(Box_t));
+        recv(conn_fd,&ttttt,sizeof(Box_t),MSG_WAITALL);
+    }
 
     //在这里开始接收群消息
     recv_t tmp;
-    bzero(&tmp,sizeof(recv_t)); //接收到的消息要加 入两个链表
+   
     int yyy=0;
     while(1)
     {   
-        if(my_recv_tmp(conn_fd,(char*)&tmp,sizeof(recv_t))<0)
+        //if(my_recv_tmp(conn_fd,(char*)&tmp,sizeof(recv_t))<0)
+        bzero(&tmp,sizeof(recv_t)); //接收到的消息要加 入两个链表
+        tmp.type = 1000;
+        if(recv(conn_fd,&tmp,sizeof(recv_t),MSG_WAITALL)<0)
         perror("error in recv\n");
+        printf("标记位　sd%s %d \n",tmp.message,tmp.type);
         if(tmp.type==EOF_OF_BOX)
         break;
         if(tmp.type==NULL_OF_GROUP)
@@ -520,7 +547,7 @@ int Del_Friend(int conn_fd)
     }
     List_ForEach(head,curpos)
     {
-        if(!strcpy(Account,curpos->recv_account));
+        if(!strcmp(Account,curpos->recv_account));
         {
             List_DelNode(curpos);
             break;
@@ -579,7 +606,7 @@ int Chat(char *account)//参数为好友账号
             while(1){
     
             system("clear");
-            printf("链表长度：%d\n",paging.totalRecords);
+            //printf("链表长度：%d\n",paging.totalRecords);
 
             //在消息盒子中查找是否有正在发消息的好友发送来的消息
             List_ForEach(Message_BOX,curos) 
@@ -703,7 +730,7 @@ int show_friend_list()//套接字为全局变量
     Paging_Locate_FirstPage(head, paging);
     do {
             system("clear");
-            printf("链表长度：%d\n",paging.totalRecords);
+            //printf("链表长度：%d\n",paging.totalRecords);
             printf(
                     "\n==============================================================\n");
             printf(
@@ -1130,7 +1157,7 @@ int show_group_member(char *account)
     do {
             Paging_Locate_FirstPage(member[mp_group[atoi(account)]], paging);
             system("clear");
-            printf("链表长度：%d\n",paging.totalRecords);
+            //printf("链表长度：%d\n",paging.totalRecords);
             printf("\001\033[1m\002");
             printf("\033[34m");
             printf(
@@ -1250,7 +1277,7 @@ int Group_Chat(char *account)//参数为想参与群聊的群号
             while(1){
             flag=0;//退出此函数标记
             system("clear");
-            printf("链表长度：%d\n",paging.totalRecords);
+            //printf("链表长度：%d\n",paging.totalRecords);
 
             //在消息盒子中查找是否有正在发消息的好友发送来的消息
             List_ForEach(Message_BOX,curos) 
@@ -1367,7 +1394,7 @@ int show_group_list()
             //paging.totalRecords=0;
             //List_ForEach(group_head,curos) paging.totalRecords++;
             system("clear");
-            printf("链表长度：%d\n",paging.totalRecords);
+            //printf("链表长度：%d\n",paging.totalRecords);
             printf(
                     "\n==============================================================\n");
             printf(

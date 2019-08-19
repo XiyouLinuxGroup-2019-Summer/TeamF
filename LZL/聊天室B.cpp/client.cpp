@@ -143,6 +143,10 @@ int main(int argc,char **argv)  //暂时无全局变量
 		case 'n': 
             show_group_list();
 			break; 
+/*         case 'c':
+        case 'C':
+            show_friend_request();
+            break; */
 		case 'L': 
 		case 'l':
             system("clear");
