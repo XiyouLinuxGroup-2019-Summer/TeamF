@@ -40,7 +40,7 @@ int my_accept_seve(void) {
     if (listen(sock_fd, 15) < 0) {
         my_err("listen", __LINE__);
     }
-    
+     
     return sock_fd;
 }
 
@@ -54,7 +54,7 @@ int my_accept_cli(void) {
     memset(&seve, 0, sizeof(struct sockaddr_in));
     seve.sin_family = AF_INET;
     seve.sin_port = htons(PORT);
-    inet_aton("192.168.3.61", &seve.sin_addr);
+    inet_aton("127.0.0.1", &seve.sin_addr);
     if (connect(sock_fd, (struct sockaddr*)&seve, sizeof(struct sockaddr_in)) < 0) {
         my_err("connect", __LINE__);
     }
